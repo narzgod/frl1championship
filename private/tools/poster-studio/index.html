@@ -474,4 +474,4 @@ document.addEventListener('contextmenu',e=>{if(e.target.closest('[data-dp]'))e.p
 // mulai
 ui();
 load().then(d=>{if(d){try{S=mig(d)}catch(err){console.log('mig gagal',err.message)}}return fontsReady}).then(()=>Promise.all(S.fonts.map(f=>loadF(f.v,`url(${f.d})`)))).then(()=>ui());
-</script></body></html>
+</script><script src="/owner/tools/prev.js"></script></body></html>

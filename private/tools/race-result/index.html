@@ -189,4 +189,4 @@ rd();draw();save()});
 $('panel').addEventListener('change',e=>{const t=e.target;if(!t.dataset.bk||!t.files[0])return;t.files[0].text().then(x=>{try{const d=JSON.parse(x);if(!d||!d.drivers||!d.res)throw 0;localStorage.setItem('f1c1',JSON.stringify(d));location.reload()}catch(er){alert('File data tidak bisa dibaca.')}});t.value=''});
 fix();S.cf.forEach(f=>regFont(f.n,f.d));S.gf.forEach(loadGF);document.fonts.onloadingdone=draw;rd();draw();
 Promise.all(['700 20px "MotoGP Display"','400 20px "MotoGP Text"','700 20px "MotoGP Text"'].map(f=>document.fonts.load(f))).then(draw);
-</script></body></html>
+</script><script src="/owner/tools/prev.js"></script></body></html>

@@ -63,7 +63,7 @@ const list=$("list"),viewer=$("viewer"),slot=$("slot");
 TOOLS.forEach(x=>{
   const b=document.createElement("button");
   b.className="card";
-  const im=x.img?'<div class="im" style="background-image:url('+x.img+')"></div>':'<div class="im ph">fRacing <span>LEGENDS</span></div>';
+  const im=x.img?'<div class="im" id="im-'+x.id+'" style="background-image:url('+x.img+')"></div>':'<div class="im ph">fRacing <span>LEGENDS</span></div>';
   b.innerHTML=im+'<div class="tx"><h2>'+x.t+'</h2><p>'+x.d+'</p></div>';
   b.onclick=()=>{history.pushState({tool:x.id},"","#"+x.id);open(x.id)};
   list.appendChild(b);
@@ -79,13 +79,20 @@ function open(id){
   }
   viewer.classList.add("on");
 }
+function refreshPrev(){
+  TOOLS.forEach(x=>{const el=$("im-"+x.id);if(!el)return;let p=null;try{p=localStorage.getItem("f1c-prev:"+x.id)}catch(e){}
+    el.style.backgroundImage="url('"+(p||x.img)+"')"})
+}
 function close(){
+  try{const w=slot.firstChild&&slot.firstChild.contentWindow;if(w&&w.__snapPrev)w.__snapPrev()}catch(e){}
   viewer.classList.remove("on");
   slot.innerHTML="";slot.dataset.id="";
+  refreshPrev();
 }
 $("lock").onclick=()=>{fetch("/api/gate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({logout:1})}).finally(()=>{location.href="/"})};
 $("back").onclick=()=>{ history.replaceState(null,"",location.pathname+location.search); close() };
 addEventListener("popstate",()=>{ const id=location.hash.slice(1); id?open(id):close() });
+refreshPrev();
 if(location.hash)open(location.hash.slice(1));
 </script>
 </body>
