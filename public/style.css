@@ -168,3 +168,6 @@ details>summary{cursor:pointer}
 /* admin: clear highlight on the item that just moved */
 @keyframes mvd{0%{box-shadow:0 0 0 3px var(--a),0 0 28px var(--a);background:color-mix(in srgb,var(--a) 22%,var(--s1))}70%{box-shadow:0 0 0 3px var(--a),0 0 18px var(--a)}100%{box-shadow:0 0 0 0 transparent}}
 .mvd{animation:mvd 1.6s ease-out}.rbox.mvd{animation:mvd 1.6s ease-out}
+
+/* standings movement */
+.mv{display:inline-flex;align-items:center;gap:4px;font-weight:800;font-size:13px}.mv i{font-style:normal;font-size:11px;line-height:1}.mv .up{color:#1fcf55}.mv .dn{color:#ff2a1f}.mv .eq{color:#8b93a7;font-size:14px}.mvh{color:var(--m)}

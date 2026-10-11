@@ -26,16 +26,19 @@ const fullBtn=()=>`<button type=button class=bt style="margin:0 0 12px" onclick=
 const tblC=(H,R,fit,vis,ix)=>tbl(ix?ix.map(k=>H[k]):H,R.map(r=>ix?ix.map(k=>r[k]):r),fit,vis);
 const vHint=(n,v)=>n>v?`<p class="m vh">Showing Top ${v} of ${n}. Scroll the table to see the rest.</p>`:'';
 const sd0=k=>(SC.find(x=>x[0]==k)||SC[12])[1];
-function rankView(items,base,scope,stat,isTeam,champ){EXP={title:base.indexOf('board')>0?'Legends Board':'Standings',sub:(isTeam?'Team':'Driver')+' ranking - '+sd0(stat),note:[]};const STEP=isTeam?5:10;EXP.rank={step:STEP,total:items.length};stat=SC.some(x=>x[0]==stat)?stat:'p';const sd=SC.find(x=>x[0]==stat),B=base+'/'+scope+'/';
-const cols=FULL?SC:SC.filter(x=>['r','w','pd','p'].includes(x[0])||x[0]==stat),L=[...items].sort((a,b)=>b.v[stat]-a.v[stat]||b.v.p-a.v.p||b.v.w-a.v.w||b.v.pd-a.v.pd),top=L[0],fm=(k,v)=>k=='gp'&&v>0?'+'+v:v;
+const rkSort=(L,stat)=>[...L].sort((a,b)=>b.v[stat]-a.v[stat]||b.v.p-a.v.p||b.v.w-a.v.w||b.v.pd-a.v.pd);
+const mvCell=(d)=>d==null?'':d>0?`<span class=mv><i class=up>&#9650;</i>${d}</span>`:d<0?`<span class=mv><i class=dn>&#9660;</i>${-d}</span>`:'<span class=mv><i class=eq>&ndash;</i></span>';
+function rankView(items,base,scope,stat,isTeam,champ,prev){EXP={title:base.indexOf('board')>0?'Legends Board':'Standings',sub:(isTeam?'Team':'Driver')+' ranking - '+sd0(stat),note:[]};const STEP=isTeam?5:10;EXP.rank={step:STEP,total:items.length};stat=SC.some(x=>x[0]==stat)?stat:'p';const sd=SC.find(x=>x[0]==stat),B=base+'/'+scope+'/';
+const cols=FULL?SC:SC.filter(x=>['r','w','pd','p'].includes(x[0])||x[0]==stat),L=rkSort(items,stat),top=L[0],PR=prev?Object.fromEntries(rkSort(prev,stat).map((x,i)=>[isTeam?x.n:x.k,i+1])):null,mvOf=(x,i)=>{if(!PR)return null;const p=PR[isTeam?x.n:x.k];return p==null?null:p-(i+1)},fm=(k,v)=>k=='gp'&&v>0?'+'+v:v;
 let h=chips([['Drivers',base+'/drv/'+stat,!isTeam],['Teams',base+'/tim/'+stat,isTeam]])+`<div class=ch>${SC.map(([k,n])=>`<a href="${B}${k}" class="${k==stat?'on':''}">${n}</a>`).join('')}</div>`;
 if(champ)h+=`<div class=hero><small>${isTeam?'World Team Champions':'World Driver Champions'}</small><b>${esc(champ.n)}</b></div>`;
 h+=top&&(top.v[stat]||stat=='gp')?`<div class=hero><small>${sd[1]} leader</small><b>${esc(top.n)}</b><span>${fm(stat,top.v[stat])}</span></div>`:'';
 if(!L.length)return h+'<p class=m>No data yet.</p>';
-return h+fullBtn()+tbl(['Pos',isTeam?'Team':'Driver'].concat(isTeam?[]:['Team']).concat(cols.map(x=>`<span class="${x[0]==stat?'hl':''}">${x[2]}</span>`)),
-L.map((x,i)=>[`<b class="pb ${i?'':'p1'}">${i+1}</b>`,nameTag(x.n,x.tx||x.c,x.c2)].concat(isTeam?[]:[nameTag(x.t,x.tt||x.c,x.c2)]).concat(cols.map(([k])=>`<span class="${k==stat?'hl':''}">${fm(k,x.v[k])}</span>`))),.62,STEP)+vHint(L.length,STEP)+expBtn()}
+return h+fullBtn()+tbl(['Pos'].concat(PR?['<span class=mvh>&plusmn;</span>']:[]).concat([isTeam?'Team':'Driver']).concat(isTeam?[]:['Team']).concat(cols.map(x=>`<span class="${x[0]==stat?'hl':''}">${x[2]}</span>`)),
+L.map((x,i)=>[`<b class="pb ${i?'':'p1'}">${i+1}</b>`].concat(PR?[mvCell(mvOf(x,i))]:[]).concat([nameTag(x.n,x.tx||x.c,x.c2)]).concat(isTeam?[]:[nameTag(x.t,x.tt||x.c,x.c2)]).concat(cols.map(([k])=>`<span class="${k==stat?'hl':''}">${fm(k,x.v[k])}</span>`))),.62,STEP)+vHint(L.length,STEP)+expBtn()}
 function pStand(e,sub,stat){const isT=sub=='tim',it=isT?tItems(e):dItems(e);let ch=null;
-if(e.done){const t=[...it].sort((a,b)=>b.v.t-a.v.t)[0];if(t&&t.v.t)ch=t}const h=rankView(it,'#/e/'+e.id+'/stand',sub,stat,isT,ch);const st=SC.some(x=>x[0]==stat)?stat:'p';EXP.title=e.name;EXP.sub=(isT?'Team':'Driver')+' Standings'+(st=='p'?'':' - '+sd0(st));EXP.note=[];return h+`<p class=m style="font-size:12px">${esc(ptsTxt(e))}</p>`}
+const has=r=>r.fe.length||r.sp.length||r.q.some(s=>s.length),rs=S.rc.filter(r=>r.ev==e.id&&has(r)),prev=rs.length>1?(isT?tItems(e,S.rc.filter(r=>r.ev==e.id&&r!==rs[rs.length-1])):dItems(e,S.rc.filter(r=>r.ev==e.id&&r!==rs[rs.length-1]))):null;
+if(e.done){const t=[...it].sort((a,b)=>b.v.t-a.v.t)[0];if(t&&t.v.t)ch=t}const h=rankView(it,'#/e/'+e.id+'/stand',sub,stat,isT,ch,prev);const st=SC.some(x=>x[0]==stat)?stat:'p';EXP.title=e.name;EXP.sub=(isT?'Team':'Driver')+' Standings'+(st=='p'?'':' - '+sd0(st));EXP.note=[];return h+(prev?`<p class=m style="font-size:12px">&#9650; / &#9660; = places gained or lost since the round before ${esc(rs[rs.length-1].circ||'the last round')}. &ndash; = no change.</p>`:'')+`<p class=m style="font-size:12px">${esc(ptsTxt(e))}</p>`}
 function pBoard(sub,stat){if(!S.ev.length)return'<p class=m>No events yet.</p>';const B=board();
 if(sub=='tim')return rankView(B.t,'#/board','tim',stat,true,null);
 const all=lpBoard(),cl=['all'].concat(LCL.map(x=>x[0].toLowerCase())),cur=cl.includes(stat)?stat:'all',L=cur=='all'?all:all.filter(x=>x.cls.toLowerCase()==cur),top=L[0];

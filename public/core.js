@@ -90,9 +90,9 @@ const tmR=(e,d,r,ses)=>{const id=(r&&ses&&r.ts&&r.ts[ses]&&r.ts[ses][d])||(r&&r.
 const tcR=(e,d,r,ses)=>txD(tmR(e,d,r,ses),d),noR=(e,d,r,ses)=>(tmR(e,d,r,ses).num||{})[d]||noOf(e,d);
 /* latest team a driver raced for (shown in driver standings) */
 const drvTm=(e,d)=>{const rs=S.rc.filter(r=>r.ev==e.id);for(let i=rs.length-1;i>=0;i--){const r=rs[i];for(const k of ['fe','sp','q2','q1','q0']){if((k[0]=='q'?r.q[+k[1]]:r[k]).some(x=>x.did==d))return tmR(e,d,r,k)}}return tmO(e,d)};
-function dItems(e){const m=stats(e);return Object.keys(m).map(d=>{const t=drvTm(e,d);return{k:d,n:dn(d),t:t.name||'-',c:t.col||'#8b93a7',c2:t.col2||'',tx:txD(t,d),tt:txT(t),v:m[d]}})}
-function tItems(e){const m=stats(e),o={};evT(e).forEach(t=>o[t.id]={n:t.name,t:'',c:t.col||'#8b93a7',c2:t.col2||'',tx:txT(t),v:Z()});
-S.rc.filter(r=>r.ev==e.id).forEach(r=>{['q'+lastQi(r),'sp','fe'].forEach(k=>{const mr=stats(e,[r],k);Object.keys(mr).forEach(d=>{const t=tmR(e,d,r,k);if(t.id&&o[t.id])addAll(o[t.id].v,mr[d],1)})})});
+function dItems(e,only){const m=stats(e,only);return Object.keys(m).map(d=>{const t=drvTm(e,d);return{k:d,n:dn(d),t:t.name||'-',c:t.col||'#8b93a7',c2:t.col2||'',tx:txD(t,d),tt:txT(t),v:m[d]}})}
+function tItems(e,only){const m=stats(e,only),o={};evT(e).forEach(t=>o[t.id]={n:t.name,t:'',c:t.col||'#8b93a7',c2:t.col2||'',tx:txT(t),v:Z()});
+(only||S.rc.filter(r=>r.ev==e.id)).forEach(r=>{['q'+lastQi(r),'sp','fe'].forEach(k=>{const mr=stats(e,[r],k);Object.keys(mr).forEach(d=>{const t=tmR(e,d,r,k);if(t.id&&o[t.id])addAll(o[t.id].v,mr[d],1)})})});
 if(e.done){const top=Object.values(o).sort((a,b)=>b.v.p-a.v.p||b.v.w-a.v.w)[0];if(top&&top.v.p>0)top.v.t=1}return Object.values(o)}
 /* Legends Point (LP) system */
 const CAT=['Open Wheel','GT Racing','Prototype Racing','Touring Car Racing','Cup Racing','Production Car Racing','Stock Car Racing','Rally','Rally-Raid','Rallycross','Off-Road Racing','Drag Racing','Drifting','Karting','Electric Racing','Endurance Racing','Hill Climb','Time Attack','Autocross','Truck Racing','Historic Racing'];
