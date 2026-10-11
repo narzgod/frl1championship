@@ -97,3 +97,30 @@ details.f summary{cursor:pointer;list-style:none}details.f summary::-webkit-deta
 .vh{font-size:12px;margin:8px 2px 0}
 #bar:has(a:nth-child(5)) a{font-size:10.5px;letter-spacing:.03em}
 .cl{margin-top:6px}.cli,.cs{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 6px;padding:10px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--s2);color:var(--t);font-size:15px;text-align:left;cursor:pointer}.cs{cursor:default;background:transparent}.cli:active{background:var(--ln)}.cli img,.cs img{flex:none}
+
+/* F1-style header: league logo left, federation logo + menu right, event bar below */
+.tb2{max-width:640px;margin:auto}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;min-height:64px}
+.hlo{display:flex;align-items:center;text-decoration:none}.hlg{height:38px;max-width:170px;object-fit:contain;display:block}
+.hrt{display:flex;align-items:center;gap:14px}.hfd{height:38px;max-width:96px;object-fit:contain;display:block}.hdv{width:1px;height:30px;background:var(--ln)}
+.hmb{width:40px;height:40px;border:0;background:none;padding:0;display:grid;align-content:center;justify-items:end;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hmb i{display:block;width:28px;height:2px;border-radius:2px;background:#fff;transform-origin:center;transition:transform .38s cubic-bezier(.2,.8,.2,1),opacity .22s ease,width .3s ease}
+.hmb i:nth-child(2){width:19px}
+.hmb.open i{width:28px}.hmb.open i:nth-child(1){transform:translateY(8px) rotate(45deg)}.hmb.open i:nth-child(2){opacity:0;transform:scaleX(0)}.hmb.open i:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
+.hsb{display:flex;align-items:center;gap:12px;padding:10px 16px;border-top:1px solid var(--ln)}
+.hst{flex:1;min-width:0}.hst h1{margin:0;font-size:17px;font-weight:800;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hst small.hsp{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--m);font-weight:700;line-height:1.1;margin-bottom:2px}
+.hsl{height:34px;max-width:110px;object-fit:contain;display:block;margin-left:auto}
+.mn{position:absolute;left:0;right:0;top:100%;height:calc(100vh - 100%);height:calc(100dvh - 100%);background:#0c0d12fa;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);overflow-y:auto;opacity:0;visibility:hidden;transform:translateY(-14px);transition:opacity .3s ease,transform .38s cubic-bezier(.2,.8,.2,1),visibility 0s linear .38s}
+.mn.open{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.mw{max-width:640px;margin:auto;padding:8px 16px 40px}
+.mi{border-bottom:1px solid var(--ln);opacity:0;transform:translateY(16px);transition:opacity .4s ease,transform .45s cubic-bezier(.2,.8,.2,1)}
+.mn.open .mi{opacity:1;transform:none;transition-delay:calc(var(--i)*70ms + .08s)}
+.mh{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0;padding:22px 0;border:0;background:none;color:#fff;text-align:left;cursor:pointer;font-family:var(--f-title);font-weight:700;font-size:24px;letter-spacing:.02em;text-transform:uppercase;-webkit-tap-highlight-color:transparent}
+.cv{flex:none;width:12px;height:12px;border-right:2px solid var(--a);border-bottom:2px solid var(--a);transform:rotate(45deg) translate(-2px,-2px);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.mi.open .cv{transform:rotate(-135deg) translate(-2px,-2px)}
+.mb{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s cubic-bezier(.2,.8,.2,1)}.mi.open .mb{grid-template-rows:1fr}.mb>div{overflow:hidden}.mc{padding:0 0 22px}
+.pgr{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.pgr a,.pgr span{display:grid;place-items:center;height:74px;padding:10px;border-radius:12px;background:var(--s1);border:1px solid var(--ln)}.pgr img{max-width:100%;max-height:100%;object-fit:contain}
+.lks a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;margin-bottom:8px;border-radius:12px;background:var(--s1);border:1px solid var(--ln);text-decoration:none;font-weight:700;font-size:15px}.lks b{color:var(--a);font-size:18px}
+/* admin: logo upload boxes */
+.lgb{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px}.lgp{min-width:96px;min-height:58px;display:grid;place-items:center;background:#171a22;border:1px solid var(--ln);border-radius:10px;padding:6px}.lgp img{max-height:46px;max-width:160px;object-fit:contain}
+.lgf{display:inline-block;margin:0;padding:10px 14px;border:1px solid var(--ln);border-radius:10px;background:var(--s2);cursor:pointer;font-size:13px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--t)}
