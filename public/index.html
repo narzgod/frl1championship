@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#0c0d12"><link rel="stylesheet" href="style.css?v=20261018"><title>fRacing Legends</title></head><body>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#0c0d12"><link rel="stylesheet" href="style.css?v=20261019"><title>fRacing Legends</title></head><body>
 <div id="top"><div class="tb" id="tb"></div></div><div class="w"><div id="msg"></div><div id="app"></div></div><div id="bar"></div>
 <script src="core.js"></script>
 <script src="flags.js"></script>
@@ -21,7 +21,7 @@ chips(av.map(s=>[NM[s],'#/r/'+r.id+'/'+s,s==ses]))+
 tbl(['Pos','No','Driver','Team','Grid','Tyre'],rows.map((x,i)=>{const c=tcR(e,x.did,r,ses),g=isR?(q.findIndex(y=>y.did==x.did)+1||'-'):i+1;
 return[`<b class="pb ${x.st?'dim':i==0?'p1':''}">${stx(x.st)||i+1}</b>`,`<span style="color:${c}">${esc(noR(e,x.did,r,ses))}</span>`,esc(dn(x.did)),nameTag(tmR(e,x.did,r,ses).name||'-',txT(tmR(e,x.did,r,ses)),tmR(e,x.did,r,ses).col2),g,tyDot(x.tyre)]}),.3)+expBtn()}
 let FULL=false;
-const togFull=()=>{FULL=!FULL;render()};
+const togFull=()=>{FULL=!FULL;render();pgAnim(1)};
 const fullBtn=()=>`<button type=button class=bt style="margin:0 0 12px" onclick="togFull()">${FULL?'&lsaquo; Back to compact view':'Show full statistics &rsaquo;'}</button>`;
 const tblC=(H,R,fit,vis,ix)=>tbl(ix?ix.map(k=>H[k]):H,R.map(r=>ix?ix.map(k=>r[k]):r),fit,vis);
 const vHint=(n,v)=>n>v?`<p class="m vh">Showing Top ${v} of ${n}. Scroll the table to see the rest.</p>`:'';
