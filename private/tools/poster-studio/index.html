@@ -244,7 +244,7 @@ function draw(){render(cx,1,true);
  if(tab==LG){let b=null;if(selLogo=='team')b=teamBox();else{const l=Q().logos.find(a=>a.id==selLogo);if(l)b={x:l.x-l.w/2,y:l.y-l.w*l.ar/2,w:l.w,h:l.w*l.ar}}outline(b,0)}}
 // ---- simpan otomatis ----
 const DB=new Promise(r=>{try{const q=indexedDB.open('poster',1);q.onupgradeneeded=()=>q.result.createObjectStore('k');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}catch(e){r(null)}});
-let tm;const save=()=>{clearTimeout(tm);tm=setTimeout(async()=>{const d=await DB;if(d)try{d.transaction('k','readwrite').objectStore('k').put(S,'s')}catch(e){}},400)};
+let tm;const flush=async()=>{const d=await DB;if(d)try{d.transaction('k','readwrite').objectStore('k').put(S,'s')}catch(e){}},save=()=>{clearTimeout(tm);tm=setTimeout(flush,400)};document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(tm);flush()}});addEventListener('pagehide',()=>{clearTimeout(tm);flush()});
 const load=async()=>{const d=await DB;return d?new Promise(r=>{const q=d.transaction('k').objectStore('k').get('s');q.onsuccess=()=>r(q.result);q.onerror=()=>r()}):0};
 const isO=v=>v&&typeof v=='object'&&!Array.isArray(v);
 function merge(b,o){if(!isO(o))return b;for(const k in o){if(o[k]===undefined)continue;b[k]=isO(b[k])&&isO(o[k])?merge(b[k],o[k]):o[k]}return b}
@@ -303,7 +303,7 @@ function ui(){
 const dpad=k=>`<div class="dp"><span></span><button data-dp="${k}" data-dx="0" data-dy="-1">▲</button><span></span><button data-dp="${k}" data-dx="-1" data-dy="0">◀</button><button data-act="dpreset" data-k="${k}">●</button><button data-dp="${k}" data-dx="1" data-dy="0">▶</button><span></span><button data-dp="${k}" data-dx="0" data-dy="1">▼</button><span></span></div>`;
  const posCard=pole?`<div class="card"><h3>Posisi nama driver</h3><label>Pindah cepat</label>${pgrid(POS9,Z.pt.name.pos,'ptpos','data-k="name"')}<label>Geser ke atas / bawah / kiri / kanan</label>${dpad('name')}<small>Tekan sekali untuk geser halus, tahan untuk geser terus. Tombol titik mengembalikan ke posisi tombol cepat. Atur lebih detail di tab Teks.</small></div>`:`<div class="card"><h3>Posisi teks</h3><label>Pindah cepat</label>${pgrid(POS6,Z.txt.pos,'tpos')}<label>Geser ke atas / bawah / kiri / kanan</label>${dpad('wtxt')}</div>`;
  const dd=D(),poseCard=dd?`<div class="card"><h3>Pose driver</h3><div class="grid3" style="grid-template-columns:repeat(2,1fr)">${dd.poses.map(p=>`<button class="btn ${p.id==dd.pose?'sel':''}" data-act="selpose" data-id="${dd.id}" data-pid="${p.id}" style="flex-direction:column;height:auto;padding:6px"><span class="pthumb" style="background-image:url('${p.photo}')"></span><span>${esc(p.name)}</span></button>`).join('')}</div><small>Tambah dan beri nama pose di tab Driver. Posisi dan ukuran foto diingat per pose.</small></div>`:'';
- const p0=tplCard+(pole?contentP():contentW())+posCard+poseCard+bgCard+photoCard+`<button class="btn ac" data-act="export">Simpan poster (PNG 2160 × 2700)</button>`;
+ const p0=tplCard+(pole?contentP():contentW())+posCard+poseCard+bgCard+photoCard+`<button class="btn ac" data-act="export">Simpan poster (PNG 2160 × 2700)</button><div class="card"><h3>Cadangan data</h3><small>Simpan semua driver, tim, pose, dan pengaturan ke satu file. Kalau data hilang (misalnya HP membersihkan data browser), tinggal buka file ini lagi.</small><div class="row" style="margin-top:8px"><button class="btn" data-act="bkexp">Simpan file data</button><button class="btn" data-act="bkimp">Buka file data</button></div><input type="file" id="bkf" accept=".json,application/json" data-act="bkfile" hidden></div>`;
  const sl=(lab,k,mn,mx,st)=>rng(lab,`data-b="txt.${k}"`,Z.txt[k],mn,mx,st);
  const textW=()=>{const x=Z.txt;return `<div class="card"><h3>Posisi teks</h3>
  <label>Pindah cepat</label>${pgrid(POS6,x.pos,'tpos')}
@@ -400,6 +400,7 @@ function snap(l,p){const hw=l.w/2,hh=l.w*l.ar/2;l.x=p[1]=='l'?60+hw:p[1]=='r'?W-
 document.addEventListener('change',e=>{
  const el=e.target,a=el.dataset.act,f=el.files&&el.files[0];
  if(el.dataset.pc){presetCol=el.value;return}
+ if(a=='bkfile'&&f){f.text().then(t=>{try{S=mig(JSON.parse(t));Promise.all(S.fonts.map(x=>loadF(x.v,`url(${x.d})`))).then(()=>{save();ui()})}catch(er){alert('File data tidak bisa dibaca.')}});el.value='';return}
  if(f&&a=='posephoto')pic(f,1600,u=>{const dr=S.drivers.find(d=>d.id==el.dataset.id),p=dr.poses.find(x=>x.id==el.dataset.pid);p.photo=u;save();ui()});
  else if(f&&a=='flagup')pic(f,500,u=>{Q().flag.src=u;Q().flag.mode='custom';save();ui()});
  else if(f&&a=='logo')pic(f,600,u=>{S.teams.find(d=>d.id==el.dataset.id).logo=u;save();ui()});
@@ -438,6 +439,8 @@ document.addEventListener('click',e=>{
  if(a=='sel')selLogo=id;
  if(a=='pos'&&lg)snap(lg,b.dataset.p);
  if(a=='dellogo'){Z.logos=Z.logos.filter(l=>l.id!=id);fixSel()}
+ if(a=='bkexp'){const bl=new Blob([JSON.stringify(S)],{type:'application/json'}),l=document.createElement('a');l.href=URL.createObjectURL(bl);l.download='poster-studio-data.json';l.click();return}
+ if(a=='bkimp'){document.getElementById('bkf').click();return}
  if(a=='export'){const c=document.createElement('canvas');c.width=W*2;c.height=H*2;render(c.getContext('2d'),2,false);c.toBlob(bl=>{const l=document.createElement('a');l.href=URL.createObjectURL(bl);l.download='poster-'+S.tpl+'-'+((D()||{}).name||'driver').replace(/\W+/g,'-')+'.png';l.click()});return}
  save();ui()});
 // geser, cubit dua jari, dan zoom

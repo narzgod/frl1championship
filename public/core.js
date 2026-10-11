@@ -160,10 +160,25 @@ rsKeys=(e,r,skip)=>{const k=new Set();['sp','fe'].forEach(s=>{if(skip&&skip==s)r
 rsCount=(e,skipRid)=>{const c={};S.rc.filter(r=>r.ev==e.id&&r.id!=skipRid).forEach(r=>rsKeys(e,r).forEach(k=>c[k]=(c[k]||0)+1));return c};
 function tyCheck(e,dids,k){for(const d of dids){const u=tyUsed(e,d);for(const c of TC)if(u[k][c]>tyTot(e,d,k,c))return dn(d)+' has no '+c+' tyres left for '+(k=='q'?'Qualifying':'Race')+'. Add supply in the Tyres tab.'}return''}
 
-/* FLIP move animation: items slide from their old spot to the new one, the moved item is lifted and highlighted */
-function flipMove(sel,fn,o){o=o||{};const els=[...document.querySelectorAll(sel)],ys=els.map(e=>e.getBoundingClientRect().top),ks=els.map(e=>e.dataset.fk);
-fn();const nw=[...document.querySelectorAll(sel)];let mv=null;
-nw.forEach((e,i)=>{const oi=o.map?o.map(i):ks.indexOf(e.dataset.fk);if(oi==null||oi<0||oi>=ys.length)return;const dy=ys[oi]-e.getBoundingClientRect().top;if(e.dataset.fk===o.key||i===o.idx)mv=e;if(Math.abs(dy)<2)return;
-e.style.position='relative';e.style.zIndex=(e.dataset.fk===o.key||i===o.idx)?3:1;
-e.animate([{transform:`translateY(${dy}px)`},{transform:'none'}],{duration:700,easing:'cubic-bezier(.22,.8,.25,1)'}).onfinish=()=>{e.style.position='';e.style.zIndex=''}});
-if(mv){mv.classList.remove('mvd');void mv.offsetWidth;mv.classList.add('mvd');const r=mv.getBoundingClientRect();if(r.top<90||r.bottom>innerHeight-20)mv.scrollIntoView({block:'center',behavior:'smooth'})}}
+/* FLIP move animation, driven frame by frame: items slide from the old spot to the new one,
+   the moved item is lifted and highlighted, and the screen follows the moved item.
+   o.map(newIndex)->oldIndex (optional), o.key (data-fk of the moved item) or o.idx (its new index) */
+function flipMove(sel,fn,o){o=o||{};const de=document.documentElement,app=document.getElementById('app'),y0=scrollY,h0=app?app.offsetHeight:0;
+const els=[...document.querySelectorAll(sel)],tops=els.map(e=>e.getBoundingClientRect().top+y0),ks=els.map(e=>e.dataset.fk);
+de.style.scrollBehavior='auto';if(app)app.style.minHeight=h0+'px';
+fn();
+scrollTo(0,y0);
+const nw=[...document.querySelectorAll(sel)];let mv=null,mdy=0;const mov=[];
+nw.forEach((e,i)=>{const oi=o.map?o.map(i):ks.indexOf(e.dataset.fk);if(oi==null||oi<0||oi>=tops.length)return;const isM=o.key!=null?e.dataset.fk===o.key:i===o.idx;const dy=tops[oi]-(e.getBoundingClientRect().top+y0);if(isM){mv=e;mdy=dy}if(Math.abs(dy)>=1)mov.push([e,dy,isM])});
+const fin=()=>{de.style.scrollBehavior='';if(app)app.style.minHeight='';mov.forEach(([e])=>{e.style.transform='';e.style.position='';e.style.zIndex='';e.style.willChange=''})};
+if(!mv){fin();return}
+mv.classList.remove('mvd');void mv.offsetWidth;mv.classList.add('mvd');
+const vis=mv.getBoundingClientRect(),want=mdy!==0&&vis.top+mdy>=60&&vis.top+mdy<innerHeight-vis.height-20;
+/* the moved item starts where it was; the page scrolls by the same distance it travels so it stays put on screen */
+const maxS=Math.max(0,de.scrollHeight-innerHeight),target=Math.min(maxS,Math.max(0,y0-mdy)),
+sd=(want||true)?target-y0:0;
+if(!mov.length){fin();return}
+mov.forEach(([e,dy,isM])=>{e.style.position='relative';e.style.zIndex=isM?3:1;e.style.willChange='transform';e.style.transform='translateY('+dy+'px)'});
+const D=Math.min(900,420+Math.abs(mdy)*.35),t0=performance.now(),ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+(function step(now){const t=Math.min(1,(now-t0)/D),k=ease(t);mov.forEach(([e,dy])=>{e.style.transform='translateY('+(dy*(1-k)).toFixed(2)+'px)'});scrollTo(0,y0+sd*k);if(t<1)requestAnimationFrame(step);else fin()})(t0);
+}

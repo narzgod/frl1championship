@@ -166,7 +166,7 @@ details>summary{cursor:pointer}
 #top .hsp{color:#ffd9d5}
 #top .hmb i{background:#fff;box-shadow:0 1px 4px #0006}
 /* admin: clear highlight on the item that just moved */
-@keyframes mvd{0%{box-shadow:0 0 0 3px var(--a),0 0 28px var(--a);background:color-mix(in srgb,var(--a) 22%,var(--s1))}70%{box-shadow:0 0 0 3px var(--a),0 0 18px var(--a)}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes mvd{0%{box-shadow:0 0 0 3px var(--a),0 0 22px var(--a)}65%{box-shadow:0 0 0 3px var(--a),0 0 14px var(--a)}100%{box-shadow:0 0 0 0 transparent}}
 .mvd{animation:mvd 1.6s ease-out}.rbox.mvd{animation:mvd 1.6s ease-out}
 
 /* standings movement */

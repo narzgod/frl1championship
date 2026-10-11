@@ -43,7 +43,7 @@ function pickA(id,d){$('#'+id).value=d;$('#ka_'+id).value='';$('#sk_'+id).innerH
 function sgA(inp,id){const e=E(),q=inp.value.trim().toLowerCase(),box=$('#sk_'+id),sel=$('#'+id);if(!q){box.innerHTML='';return}
 const L=evD(e).filter(d=>d!=sel.value&&(nmL(d).toLowerCase().includes(q)||d.includes(q)));
 box.innerHTML=L.length?L.slice(0,6).map(d=>`<button type=button class=sgb onclick="pickA('${id}','${d}')">${esc(nmL(d))} <span class=m>${d}</span></button>`).join(''):'<span class=m>No driver found</span>'}
-function mvRow(i,d){col();const j=i+d;if(j<0||j>=ed.n)return;const t=ed.rows[i];ed.rows[i]=ed.rows[j];ed.rows[j]=t;render()}
+function mvRow(i,d){col();const j=i+d;if(j<0||j>=ed.n)return;flipMove('.rbox',()=>{const t=ed.rows[i];ed.rows[i]=ed.rows[j];ed.rows[j]=t;render()},{map:n=>n==i?j:n==j?i:n,idx:j})}
 function jumpRow(i,v){if(v==='')return;const j=+v;col();if(!(j>=0&&j<ed.n)||j==i)return render();const mp=n=>n==j?i:(i<j?(n>=i&&n<j?n+1:n):(n>j&&n<=i?n-1:n));flipMove('.rbox',()=>{const t=ed.rows.splice(i,1)[0];ed.rows.splice(j,0,t);render()},{map:mp,idx:j})}
 function fillQ1(){col();const r=rrNow(),[a,b]=rng(ed.ses),q0=((r&&r.q[0])||[]).filter(x=>x.did);if(!q0.length)return say('Qualifying 1 has no saved drivers yet.');
 if(ed.rows.some(x=>x.did)&&!confirm('Replace the current driver list with the drivers from Qualifying 1?'))return;

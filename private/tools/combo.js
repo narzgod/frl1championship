@@ -70,4 +70,5 @@
   var sched = 0; new MutationObserver(function () { if (sched) return; sched = requestAnimationFrame(function () { sched = 0; scan(); }); }).observe(document.documentElement, { childList: true, subtree: true });
   if (document.readyState !== 'loading') scan(); else document.addEventListener('DOMContentLoaded', scan);
   window.fltBox = function (key, ph) { return '<input class="fltb" type="search" data-flt="' + key + '" placeholder="' + (ph || 'Cari...') + '" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="fltn" style="display:none"></div>'; };
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 })();

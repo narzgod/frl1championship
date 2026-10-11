@@ -59,7 +59,10 @@ function impMM() {
   S.rowCount = Math.min(+S.rowCount || 10, S.rows.length); return true;
 }
 let saveT;
-function save() { clearTimeout(saveT); saveT = setTimeout(async () => { try { const d = await idb(); d.transaction('k', 'readwrite').objectStore('k').put(S, 'state'); } catch (e) { } }, 400); }
+async function flush() { try { const d = await idb(); d.transaction('k', 'readwrite').objectStore('k').put(S, 'state'); } catch (e) { } }
+function save() { clearTimeout(saveT); saveT = setTimeout(flush, 400); }
+document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(saveT); flush(); } });
+addEventListener('pagehide', () => { clearTimeout(saveT); flush(); });
 function normState(v) {
   const df = defaults(), st = Object.assign(df, v);
   if ((v.ver || 0) < 2) { st.layers = defaults().layers; st.bg = df.bg; st.teams.forEach(t => { const m = df.teams.find(x => x.name === t.name); if (m) { t.c1 = m.c1; t.c2 = m.c2; t.c3 = m.c3; } else t.c3 = contrast(t.c1); }); }

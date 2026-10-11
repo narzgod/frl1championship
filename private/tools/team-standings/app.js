@@ -54,7 +54,10 @@ function impMM() {
   return true;
 }
 let saveT;
-function save() { clearTimeout(saveT); saveT = setTimeout(async () => { try { const d = await idb(); d.transaction('k', 'readwrite').objectStore('k').put(S, 'state'); } catch (e) { } }, 400); }
+async function flush() { try { const d = await idb(); d.transaction('k', 'readwrite').objectStore('k').put(S, 'state'); } catch (e) { } }
+function save() { clearTimeout(saveT); saveT = setTimeout(flush, 400); }
+document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(saveT); flush(); } });
+addEventListener('pagehide', () => { clearTimeout(saveT); flush(); });
 function normState(v) {
   const st = Object.assign(defaults(), v), d = defaults();
   st.st = Object.assign({}, d.st, v.st); st.fontMap = Object.assign({}, d.fontMap, v.fontMap); st.titleCfg = Object.assign({}, d.titleCfg, v.titleCfg);
