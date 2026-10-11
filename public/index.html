@@ -62,8 +62,8 @@ function pDaftar(){const n=S.ev.filter(e=>isOpen(e)&&!isFull(e)).length;return`<
 function render(){const p=location.hash.slice(1).split('/'),k=p[1];let A='#e10600',T='',bk='',b,tb,e,r;
 const rt=a=>[['Events','#/'],['Legends Board','#/board'],['Register','#/daftar']].map(([n,h],i)=>[n,h,i==a]);
 const et=(e,a)=>[['Races','#/e/'+e.id+'/race'],['Standings','#/e/'+e.id+'/stand'],['Teams','#/e/'+e.id+'/teams'],['Tyres','#/e/'+e.id+'/tyres'],['Reserves','#/e/'+e.id+'/reserves']].map(([n,h],i)=>[n,h,i==a]);
-if(k=='e'&&(e=S.ev.find(x=>x.id==p[2]))){A=dc(e);T=e.name;TSP=e.sp||'';TSL=e.slogo||'';bk='#/';const s=p[3]||'race';b=s=='stand'?pStand(e,p[4],p[5]):s=='teams'?pTeams(e):s=='tyres'?pTyres(e):s=='reserves'?pReserves(e):pRace(e);tb=et(e,['race','stand','teams','tyres','reserves'].indexOf(s))}
-else if(k=='r'&&(r=S.rc.find(x=>x.id==p[2]))&&(e=S.ev.find(x=>x.id==r.ev))){A=dc(e);T=e.name;TSP=e.sp||'';TSL=e.slogo||'';bk='#/e/'+e.id+'/race';b=pRes(e,r,p[3]);tb=et(e,0)}
+if(k=='e'&&(e=S.ev.find(x=>x.id==p[2]))){A=dc(e);T=e.name;TSP=e.sp||'';TSL=e.slogo||'';TEV=e;bk='#/';const s=p[3]||'race';b=s=='stand'?pStand(e,p[4],p[5]):s=='teams'?pTeams(e):s=='tyres'?pTyres(e):s=='reserves'?pReserves(e):pRace(e);tb=et(e,['race','stand','teams','tyres','reserves'].indexOf(s))}
+else if(k=='r'&&(r=S.rc.find(x=>x.id==p[2]))&&(e=S.ev.find(x=>x.id==r.ev))){A=dc(e);T=e.name;TSP=e.sp||'';TSL=e.slogo||'';TEV=e;bk='#/e/'+e.id+'/race';b=pRes(e,r,p[3]);tb=et(e,0)}
 else if(k=='board'){T='Legends Board';b=pBoard(p[2],p[3]);tb=rt(1)}
 else if(k=='daftar'){T='Register';b=pDaftar();tb=rt(2)}
 else{b=pHome();tb=rt(0)}

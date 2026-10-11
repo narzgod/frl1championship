@@ -1,7 +1,7 @@
 /* fRacing Legends - shared data & helpers */
 let S;try{S=JSON.parse(localStorage.getItem('f1c-mm'))}catch(e){}
 S=S||{ev:[],dr:[],tm:[],rc:[]};['ev','dr','tm','rc'].forEach(k=>S[k]=S[k]||[]);
-let TSP='',TSL='';const ADMIN=location.pathname.indexOf('/owner')==0;let SYNC='local',BASE=0,pushT;
+let TSP='',TSL='',TEV=null;const ADMIN=location.pathname.indexOf('/owner')==0;let SYNC='local',BASE=0,pushT;
 const loc=()=>{try{localStorage.setItem('f1c-mm',JSON.stringify(S));localStorage.setItem('f1c-hub',JSON.stringify(hub()))}catch(e){}};
 const save=()=>{loc();if(ADMIN&&SYNC=='cloud'){clearTimeout(pushT);pushT=setTimeout(doPush,300)}};
 async function doPush(){try{const r=await fetch('/api/state',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({s:S,base:BASE})});
@@ -48,17 +48,19 @@ const waLink=n=>n?`<a href="https://wa.me/${n.replace(/\D/g,'')}" target=_blank 
 const sUrl=u=>{u=String(u||'').trim();return /^https?:\/\//i.test(u)?u:(/^[a-z][a-z0-9+.-]*:/i.test(u)?'#':'https://'+u)};
 const szv=(z,k,d)=>{const v=+(z||{})[k];return v>=20&&v<=120?v:d};
 function hdrBar(o){const z=o.sz,hl=szv(z,'league',44),hf=szv(z,'fed',44),hs=szv(z,'sp',44),sep=o.sep=='x'?'<span class=hsx>&times;</span>':'<span class=hdv></span>';
+if(o.home)o={logo:o.logo,sz:z,home:1};
 return`<div class=hd><div class=hlf><a class=hlo href="#/">${o.logo?`<img class=hlg style="height:${hl}px" src="${esc(o.logo)}" alt="">`:'<div class=br>fRacing <b>LEGENDS</b></div>'}</a>${o.sp?`${sep}<img class=hsp2 style="height:${hs}px" src="${esc(o.sp)}" alt="">`:''}</div><div class=hrt>${o.fed?`<img class=hfd style="height:${hf}px" src="${esc(o.fed)}" alt=""><span class=hdv></span>`:''}<button type=button id=hmb class=hmb aria-label="Menu" onclick="toggleMenu()"><i></i><i></i><i></i></button></div></div>`}
 let LASTK='';const pgKey=()=>location.hash+'|'+(typeof at!=='undefined'?at:'');
-function pgAnim(force){const a=$('#app');if(!a)return;const k=pgKey(),n=force||k!==LASTK;LASTK=k;a.classList.remove('pg','pf');if(!n&&!ADMIN)return;void a.offsetWidth;a.classList.add(n?'pg':'pf')}
+function pgAnim(force){const a=$('#app');if(!a)return;const k=pgKey(),n=force||k!==LASTK;LASTK=k;a.classList.remove('pg','pf');if(!n)return;void a.offsetWidth;a.classList.add(n?'pg':'pf')}
 function hdrHtml(T,bk,sp,sl){const c=S.cfg||{},L=(c.pt||[]),mi=(i,t,b)=>`<div class=mi style="--i:${i}"><button type=button class=mh onclick="mnAcc(this)"><span>${t}</span><i class=cv></i></button><div class=mb><div><div class=mc>${b}</div></div></div></div>`,
 lk=a=>a&&a.length?`<div class=lks>${a.map(x=>`<a href="${esc(sUrl(x.u))}" target=_blank rel=noopener><span>${esc(x.n)}</span><b>&#8599;</b></a>`).join('')}</div>`:'<p class=m>Coming soon.</p>',
 pg=L.length?`<div class=pgr>${L.map(x=>x.u?`<a href="${esc(sUrl(x.u))}" target=_blank rel=noopener title="${esc(x.n||'')}"><img src="${esc(x.l)}" alt="${esc(x.n||'')}"></a>`:`<span title="${esc(x.n||'')}"><img src="${esc(x.l)}" alt="${esc(x.n||'')}"></span>`).join('')}</div>`:'<p class=m>Coming soon.</p>';
-return hdrBar({logo:c.logo,fed:c.fed,sp:sl,sz:c.sz,sep:c.sep})+(T?`<div class=hsb>${bk?`<a class=bk href="${bk}">&larr;</a>`:''}<div class=hst>${sp?`<small class=hsp>${esc(sp)}</small>`:''}<h1>${esc(T)}</h1></div></div>`:'')+`<div class=mn id=mn onclick="if(event.target===this)toggleMenu()"><div class=mw>${mi(1,'Our Partners',pg)}${mi(2,'Visit Our Social Media',lk(c.social))}${mi(3,'Join Our Community',lk(c.comm))}</div></div>`}
+const ev=TEV,zz=c.sz||{},hb=ev?hdrBar({logo:ev.elogo||c.logo,fed:c.fed,sp:ev.slogo||sl,sz:{league:+ev.esz||zz.league,fed:zz.fed,sp:+ev.ssz||zz.sp},sep:c.sep}):hdrBar({home:1,logo:c.logo,sz:{league:zz.league}});
+return hb+(T?`<div class=hsb>${bk?`<a class=bk href="${bk}">&larr;</a>`:''}<div class=hst>${sp?`<small class=hsp>${esc(sp)}</small>`:''}<h1>${esc(T)}</h1></div></div>`:'')+`<div class=mn id=mn onclick="if(event.target===this)toggleMenu()"><div class=mw>${mi(1,'Our Partners',pg)}${mi(2,'Visit Our Social Media',lk(c.social))}${mi(3,'Join Our Community',lk(c.comm))}</div></div>`}
 function toggleMenu(){const m=$('#mn'),b=$('#hmb');if(!m)return;const o=!m.classList.contains('open');m.classList.toggle('open',o);if(b)b.classList.toggle('open',o);document.body.style.overflow=o?'hidden':''}
 function mnAcc(b){const i=b.parentNode,o=i.classList.contains('open');i.parentNode.querySelectorAll('.mi.open').forEach(x=>x.classList.remove('open'));if(!o)i.classList.add('open')}
 function mount(T,bk,tabs,body,A){const sp=TSP,sl=TSL;TSP='';TSL='';document.body.style.overflow='';try{EXP.sp=sp}catch(_){}A=A||'#e10600';const r=document.documentElement.style;r.setProperty('--a',A);r.setProperty('--ac',contrast(A));
-if(ADMIN){$('#tb').className='tb';$('#tb').innerHTML=(bk?`<a class=bk href="${bk}">&larr;</a>`:'')+(T?`<h1>${sp?`<small class=hsp>${esc(sp)}</small>`:''}${esc(T)}</h1>`:'<div class=br>fRacing <b>LEGENDS</b></div>')}else{$('#tb').className='tb2';$('#tb').innerHTML=hdrHtml(T,bk,sp,sl)}
+if(ADMIN){$('#tb').className='tb';$('#tb').innerHTML=(bk?`<a class=bk href="${bk}">&larr;</a>`:'')+(T?`<h1>${sp?`<small class=hsp>${esc(sp)}</small>`:''}${esc(T)}</h1>`:'<div class=br>fRacing <b>LEGENDS</b></div>')}else{$('#tb').className='tb2';$('#tb').innerHTML=hdrHtml(T,bk,sp,sl);TEV=null}
 $('#bar').innerHTML=tabs?tabs.map(([n,h,on])=>`<a href="${h}" class="${on?'on':''}">${n}</a>`).join(''):'';$('#bar').style.display=tabs?'flex':'none';$('#app').innerHTML=body;pgAnim();requestAnimationFrame(fitTables)}
 /* zoom wide tables out so everything fits on screen (data-fit = smallest allowed zoom) */
 function fitTables(){document.querySelectorAll('.sc[data-fit]').forEach(sc=>{const t=sc.querySelector('table');if(!t)return;t.style.zoom='';t.style.width='';sc.classList.add('fit');t.style.width='max-content';const nat=t.offsetWidth,av=sc.clientWidth,mn=parseFloat(sc.dataset.fit)||.3;let z=av>0&&nat>0?Math.min(1,av/nat):1;if(z<mn)z=mn;if(z<1){t.style.zoom=z}else{t.style.zoom='';t.style.width=''}
@@ -157,3 +159,11 @@ const RSL=4,rsSlot=(e,x,r,s)=>{const tid=x.rt||tmR(e,x.did,r,s).id||'',t=evT(e).
 rsKeys=(e,r,skip)=>{const k=new Set();['sp','fe'].forEach(s=>{if(skip&&skip==s)return;(r[s]||[]).forEach(x=>{if(x.rs&&x.did)k.add(rsSlot(e,x,r,s))})});return k},
 rsCount=(e,skipRid)=>{const c={};S.rc.filter(r=>r.ev==e.id&&r.id!=skipRid).forEach(r=>rsKeys(e,r).forEach(k=>c[k]=(c[k]||0)+1));return c};
 function tyCheck(e,dids,k){for(const d of dids){const u=tyUsed(e,d);for(const c of TC)if(u[k][c]>tyTot(e,d,k,c))return dn(d)+' has no '+c+' tyres left for '+(k=='q'?'Qualifying':'Race')+'. Add supply in the Tyres tab.'}return''}
+
+/* FLIP move animation: items slide from their old spot to the new one, the moved item is lifted and highlighted */
+function flipMove(sel,fn,o){o=o||{};const els=[...document.querySelectorAll(sel)],ys=els.map(e=>e.getBoundingClientRect().top),ks=els.map(e=>e.dataset.fk);
+fn();const nw=[...document.querySelectorAll(sel)];let mv=null;
+nw.forEach((e,i)=>{const oi=o.map?o.map(i):ks.indexOf(e.dataset.fk);if(oi==null||oi<0||oi>=ys.length)return;const dy=ys[oi]-e.getBoundingClientRect().top;if(e.dataset.fk===o.key||i===o.idx)mv=e;if(Math.abs(dy)<2)return;
+e.style.position='relative';e.style.zIndex=(e.dataset.fk===o.key||i===o.idx)?3:1;
+e.animate([{transform:`translateY(${dy}px)`},{transform:'none'}],{duration:700,easing:'cubic-bezier(.22,.8,.25,1)'}).onfinish=()=>{e.style.position='';e.style.zIndex=''}});
+if(mv){mv.classList.remove('mvd');void mv.offsetWidth;mv.classList.add('mvd');const r=mv.getBoundingClientRect();if(r.top<90||r.bottom>innerHeight-20)mv.scrollIntoView({block:'center',behavior:'smooth'})}}
