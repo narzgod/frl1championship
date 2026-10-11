@@ -86,7 +86,7 @@ td,.tp,.m{font-family:var(--f-body)}
 a.wa{display:inline-block;background:#1f8f4a;color:#fff;text-decoration:none;border-radius:8px;padding:7px 12px;font-size:13px;font-family:var(--f-ui);font-weight:700}
 details.f summary{cursor:pointer;list-style:none}details.f summary::-webkit-details-marker{display:none}
 
-.tt th,.tt td{text-align:center}.tt td:first-child{text-align:left;vertical-align:middle}.tt th[rowspan]{text-align:left;vertical-align:bottom;padding-bottom:14px}.tt.rv th:first-child{text-align:left}.tt .tgl{border-left:2px solid var(--b,#888)}.tt th[colspan],.tt th[rowspan]{font-size:1.05em;letter-spacing:.04em}
+.tt th,.tt td{text-align:center}.tt td:first-child{text-align:left;vertical-align:middle}.tt th[rowspan]{text-align:center;vertical-align:middle}.tt .tgl{border-left:2px solid var(--b,#888)}.tt th[colspan],.tt th[rowspan]{font-size:1.05em;letter-spacing:.04em}
 
 .ev .sp{font-family:var(--f-ui);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--m);margin-bottom:5px}
 .tb h1 small.hsp{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--m);font-weight:700;line-height:1.1;margin-bottom:2px}
@@ -117,8 +117,8 @@ details.f summary{cursor:pointer;list-style:none}details.f summary::-webkit-deta
 .mn.open .mi{opacity:1;transform:none;transition-delay:calc(var(--i)*70ms + .08s)}
 .mh{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0;padding:22px 0;border:0;background:none;color:var(--t);text-align:left;cursor:pointer;text-decoration:none;font-family:var(--f-title);font-weight:700;font-size:24px;letter-spacing:.02em;text-transform:uppercase;-webkit-tap-highlight-color:transparent}
 .cv{flex:none;width:12px;height:12px;border-right:2px solid var(--a);border-bottom:2px solid var(--a);transform:rotate(45deg) translate(-2px,-2px);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
-.mi.open .cv{transform:rotate(-135deg) translate(-2px,-2px)}
-.mb{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s cubic-bezier(.2,.8,.2,1)}.mi.open .mb{grid-template-rows:1fr}.mb>div{overflow:hidden}.mc{padding:0 0 22px}
+.mi.open>.mh .cv,.sb.open>.mh2 .cv{transform:rotate(-135deg) translate(-2px,-2px)}
+.mb{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s cubic-bezier(.2,.8,.2,1)}.mi.open>.mb,.sb.open>.mb{grid-template-rows:1fr}.mb>div{overflow:hidden}.mc{padding:0 0 22px}
 .pgr{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.pgr a,.pgr span{display:grid;place-items:center;height:74px;padding:6px;border-radius:12px;background:none;border:0}.pgr img{max-width:100%;max-height:100%;object-fit:contain}
 .lks a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;margin-bottom:8px;border-radius:12px;background:var(--s1);border:1px solid var(--ln);text-decoration:none;font-weight:700;font-size:15px}.lks b{color:var(--a);font-size:18px}
 /* admin: logo upload boxes */
@@ -184,3 +184,16 @@ details>summary{cursor:pointer}
 .tsec{margin:26px 0 0}.tsec h3{margin:0 0 10px;font-family:var(--f-title);font-size:17px;letter-spacing:.03em}.tsec p,.tsec li{color:var(--m);line-height:1.7;margin:0 0 12px}.tsec ul{margin:0 0 12px;padding-left:20px}
 /* light mode: only the variables change; the red header stays red in both modes */
 html[data-theme=light]{--bg:#f3f4f7;--s1:#ffffff;--s2:#eceef3;--ln:#d8dce6;--t:#14161d;--m:#5a6275;--bgf:#f3f4f7f5;--mnb:#f3f4f7fa}
+
+/* Our Partners: pick an event first, then its sponsors */
+.sb{border-top:1px solid var(--ln)}.sb:first-child{border-top:0}
+.mh2{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0;padding:16px 2px;border:0;background:none;color:var(--t);text-align:left;cursor:pointer;font-family:var(--f-ui);font-weight:700;font-size:16px;-webkit-tap-highlight-color:transparent}
+.mc2{padding:2px 0 16px}
+/* every table: red header row in dark and light mode */
+.sc th{background:#e10600;color:#fff;border-bottom:0}
+.sc th+th{box-shadow:inset 1px 0 0 #ffffff33}
+.sc.sv th{background:#e10600;box-shadow:inset 0 -1px 0 #0000003d}
+.sc th .hl,.sc th .mvh{background:#ffffff33;color:#fff;border-radius:6px;padding:2px 7px}
+/* light mode: tables and the race calendar stay black, with a black / white / black / white gradient */
+html[data-theme=light] .sc,html[data-theme=light] a.cd[href^="#/r/"]{--t:#f2f4f8;--m:#a4acbd;--s1:#0c0d12;--s2:#171a22;--ln:#2a2e3a;color:var(--t);border-color:#2a2e3a;background:linear-gradient(135deg,#000 0%,#ffffff33 33%,#000 66%,#ffffff33 100%),#0c0d12}
+html[data-theme=light] .sc.sv th,html[data-theme=light] .sc th{background:#e10600}
