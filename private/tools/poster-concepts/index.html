@@ -55,7 +55,17 @@ const BASE={type:'pole',cn:0,t1:'POLE',t2:'POSITION',first:'Felipe',last:'Drugov
  ps:1,px:0,py:0,ac:'#1d9ad6',tx:'#ffffff',fd:'MotoGP Display',ft:'MotoGP Text',fs:1,photoFull:false};
 let Z=Object.assign({},BASE);
 try{const s=JSON.parse(localStorage.getItem('pc2')||'null');if(s)Z=Object.assign({},BASE,s)}catch(e){}
-const save=()=>{try{localStorage.setItem('pc2',JSON.stringify(Z))}catch(e){}};
+/* drivers, teams and all pictures live in IndexedDB (pictures are too big for localStorage) */
+let P={teams:[],drivers:[],img:{}};
+const IDBP=new Promise(r=>{try{const q=indexedDB.open('poster-concepts',1);q.onupgradeneeded=()=>q.result.createObjectStore('k');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}catch(e){r(null)}});
+let svT;const flushP=async()=>{const d=await IDBP;if(d)try{d.transaction('k','readwrite').objectStore('k').put({P,Z},'s')}catch(e){}};
+const save=()=>{try{localStorage.setItem('pc2',JSON.stringify(Z))}catch(e){}clearTimeout(svT);svT=setTimeout(flushP,500)};
+addEventListener('pagehide',()=>{clearTimeout(svT);flushP()});document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(svT);flushP()}});
+const loadP=async()=>{const d=await IDBP;return d?new Promise(r=>{const q=d.transaction('k').objectStore('k').get('s');q.onsuccess=()=>r(q.result);q.onerror=()=>r()}):0};
+const imgFrom=(k,u)=>new Promise(r=>{const im=new Image();im.onload=()=>{IMG[k]=im;r()};im.onerror=()=>r();im.src=u});
+/* downscale a picked file to a data URL (keeps transparency) */
+function packImg(f,max){return new Promise(r=>{const fr=new FileReader;fr.onload=()=>{const i=new Image;i.onload=()=>{const k=Math.min(1,max/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);let u=c.toDataURL('image/webp',.92);if(u.indexOf('image/webp')<0)u=c.toDataURL('image/png');r(u)};i.onerror=()=>r('');i.src=fr.result};fr.onerror=()=>r('');fr.readAsDataURL(f)})}
+const dsz=k=>/^ph(:|$)|^car$/.test(k)?900:k=='bg'?1500:520;
 /* ---------- helpers ---------- */
 const FD=()=>`"${Z.fd}",Impact,sans-serif`,FT=()=>`"${Z.ft}",system-ui,sans-serif`;
 function T(s,x,y,o){s=String(s==null?'':s);o=Object.assign({size:40,w:700,col:Z.tx,al:'left',bl:'alphabetic',fam:'T',st:1,sc:1},o);
@@ -80,14 +90,37 @@ function photo(img,b,o){o=o||{};if(!img){sil(b);return}
 function cover(img,x,y,w,h,z,ox,oy){const k=Math.max(w/img.width,h/img.height)*(z||1),iw=img.width*k,ih=img.height*k;
  cx.save();cx.beginPath();cx.rect(x,y,w,h);cx.clip();cx.drawImage(img,x+(w-iw)/2+(ox||0)*w,y+(h-ih)/2+(oy||0)*h,iw,ih);cx.restore()}
 function contain(img,x,y,w,h){const k=Math.min(w/img.width,h/img.height),iw=img.width*k,ih=img.height*k;cx.drawImage(img,x+(w-iw)/2,y+(h-ih)/2,iw,ih)}
-function badge(name,x,y,s,col,r){r=r==null?8:r;const lg=IMG['tl:'+name];fillRR(x,y,s,s,r,col||'#333');
- if(lg){contain(lg,x+s*.12,y+s*.12,s*.76,s*.76)}else{T((name||'?').trim().charAt(0).toUpperCase(),x+s/2,y+s/2,{size:s*.5,fam:'D',al:'center',bl:'middle',col:'#fff',nofs:1})}}
+function badge(lg,nm,x,y,s0,col,r,o){o=o||{};let s=s0,k=o.ak=='tm'?(((Z.ad||{}).tm||{}).s||1):(o.ls||1),dx=0,dy=0;
+ if(o.ak=='tm'){const a=(Z.ad||{}).tm||{};dx=a.x||0;dy=a.y||0}
+ const bs=s*k,bx=x+(s-bs)/2+dx,by=y+(s-bs)/2+dy,box=o.box!==false;
+ if(box)fillRR(bx,by,bs,bs,r==null?8:r,col||'#333');
+ if(lg){const m=box?bs*.12:bs*.02;contain(lg,bx+m,by+m,bs-2*m,bs-2*m)}else if(box){T((nm||'?').trim().charAt(0).toUpperCase(),bx+bs/2,by+bs/2,{size:bs*.5,fam:'D',al:'center',bl:'middle',col:'#fff',nofs:1})}
+ if(o.ak)HIT.push({k:o.ak,b:[bx,by,bs,bs]})}
 const splitName=n=>{n=(n||'').trim();if(n.includes('/')){const a=n.split('/');return[a[0].trim(),a.slice(1).join('/').trim()]}const p=n.split(/\s+/);return p.length<2?['',p[0]||'']:[p.slice(0,-1).join(' '),p[p.length-1]]};
 const lines=s=>(s||'').split('\n').map(l=>l.trim()).filter(Boolean);
-const parseGrid=()=>lines(Z.gl).map(l=>{const a=l.split(/[|;]/).map(s=>s.trim()),n=splitName(a[0]);return{f:n[0],l:n[1],team:a[1]||'',pen:a[2]||''}});
-const parseLine=()=>lines(Z.ll).map(l=>{const a=l.split(/[|;]/).map(s=>s.trim());return{team:a[0]||'',d:[a[1]||'',a[2]||'']}});
-const teamNames=()=>{const o=[];(Z.type=='grid'?parseGrid().map(d=>d.team):parseLine().map(d=>d.team)).forEach(t=>{if(t&&!o.includes(t))o.push(t)});return o};
-const tcol=n=>Z.tmc[n]||PAL[Math.max(0,teamNames().indexOf(n))%PAL.length];
+const drv=id=>P.drivers.find(d=>d.id==id),tmo=id=>P.teams.find(t=>t.id==id);
+const dFull=d=>d?((d.first||'')+' '+(d.last||'')).trim():'';
+const parseGrid=()=>(Z.grid||[]).slice(0,Z.gn||10).map(r=>{const d=drv(r.d)||{};return{f:d.first||'',l:d.last||'',team:d.team||'',pen:r.pen||'',id:r.d||''}});
+const parseLine=()=>(Z.line||[]).slice(0,Z.ln||10).map(r=>{const t=tmo(r.t)||{};return{team:r.t||'',tn:t.name||'',d:[r.d1||'',r.d2||'']}});
+const tcol=id=>{const t=tmo(id);return t&&t.c?t.c:PAL[Math.max(0,P.teams.findIndex(x=>x.id==id))%PAL.length]};
+const curPh=()=>IMG['ph:'+Z.drv]||IMG.ph;
+const curTl=()=>{const d=drv(Z.drv);return(d&&IMG['tl:'+d.team])||IMG['tl:main']};
+const mainCol=()=>{const d=drv(Z.drv);return Z.tmc.main||(d&&d.team?tcol(d.team):'#222')};
+/* free placement: logos and sponsors can be dragged on the poster and scaled (stored per poster layout) */
+const LK=()=>Z.type+Z.cn;
+const AD=k=>{Z.ad=Z.ad||{};const n=LK()+':'+k;return Z.ad[n]||(Z.ad[n]={})};
+const adj=(k,x,y,w,h)=>{const a=(Z.ad||{})[LK()+':'+k]||{},s=a.s||1,nw=w*s,nh=h*s;return[x+(w-nw)/2+(a.x||0),y+(h-nh)/2+(a.y||0),nw,nh]};
+const SPL=()=>{Z.sp=Z.sp||{};return Z.sp[LK()]||(Z.sp[LK()]=[])};
+let HIT=[];
+function LGD(x,y,w,h){if(!IMG.lg)return;const b=adj('lg',x,y,w,h);contain(IMG.lg,b[0],b[1],b[2],b[3]);HIT.push({k:'lg',b})}
+function TB(id,x,y,s,r){const t=tmo(id)||{};badge(IMG['tl:'+id],t.name,x,y,s,tcol(id),r,{ls:t.ls||1,box:!t.nb})}
+function drawSp(){SPL().forEach(q=>{const im=IMG['sp:'+q.id];if(!im)return;const h=q.h,w=h*im.width/im.height;cx.drawImage(im,q.x-w/2,q.y-h/2,w,h);HIT.push({k:'sp:'+q.id,b:[q.x-w/2,q.y-h/2,w,h]})})}
+function seedData(){const lines2=s=>(s||'').split('\n').map(l=>l.trim()).filter(Boolean);
+ const tid={},did={},mk=n=>{if(!n)return'';if(!tid[n]){tid[n]='t'+(P.teams.length+1);P.teams.push({id:tid[n],name:n,c:PAL[P.teams.length%PAL.length]})}return tid[n]},
+ md=(nm,team)=>{const k=nm.toLowerCase().replace(/\//g,' ');if(!nm)return'';if(did[k])return did[k];const q=splitName(nm),id='d'+(P.drivers.length+1);did[k]=id;P.drivers.push({id,first:q[0],last:q[1],team:mk(team)});return id};
+ Z.grid=lines2(BASE.gl).slice(0,10).map(l=>{const a=l.split(/[|;]/).map(x=>x.trim());return{d:md(a[0],a[1]),pen:a[2]||''}});
+ Z.line=lines2(BASE.ll).slice(0,10).map(l=>{const a=l.split(/[|;]/).map(x=>x.trim());const t=mk(a[0]);return{t,d1:md(a[1]||'',a[0]),d2:md(a[2]||'',a[0])}});
+ Z.gn=10;Z.ln=10}
 /* ---------- backgrounds ---------- */
 function rnd(seed){let s=seed;return()=>(s=(s*16807)%2147483647)/2147483647}
 const BG={
@@ -124,19 +157,19 @@ function bigTitle(a,b,x,y,wmax,o){ // two lines sharing one size so the longer w
  cx.save();cx.font=`700 100px ${FD()}`;const w=Math.max(cx.measureText(a).width,cx.measureText(b||'').width,1);cx.restore();
  const sz=Math.min(o.max,100*wmax/w)/Z.fs,y1=y+sz*Z.fs*.74;T(a,x,y1,Object.assign({size:sz,fam:'D',w:700},o));if(!b)return y1;const y2=y1+sz*Z.fs*(o.lh||1.0);T(b,x,y2,Object.assign({size:sz,fam:'D',w:700},o));return y2}
 function poleA(){
- photo(IMG.ph,{x:380,y:40,w:700,h:1310},{s:Z.ps,x:Z.px,y:Z.py});
  fillRR(0,170,590,1010,0,'rgba(8,11,16,.76)');cx.fillStyle=Z.ac;cx.fillRect(0,0,26,H);
+ photo(curPh(),{x:380,y:40,w:700,h:1310},{s:Z.ps,x:Z.px,y:Z.py}); /* driver in front of the black panel */
  let y=250;if(Z.spon){T(Z.spon,80,y+36,{size:46,w:400,it:1,fam:'T',maxW:470});y+=70}
  const b=bigTitle(Z.t1,Z.t2,80,y+8,460,{max:170,lh:1.02,col:Z.tx});
  T((Z.first||'').toUpperCase(),80,b+72,{size:36,w:400,maxW:460});
  T((Z.last||'').toUpperCase(),80,b+134,{size:68,fam:'D',w:700,maxW:470});
  let n=b+134;if(Z.value){n+=58;T(Z.value,80,n,{size:42,w:700,col:Z.ac,maxW:460})}
- const by=n+34;badge('main',80,by,130,Z.tmc.main||'#222',10);
+ const by=n+34;badge(curTl(),Z.first,80,by,130,mainCol(),10,{ak:'tm',box:Z.tlbox!==false});
  cx.fillStyle='rgba(255,255,255,.35)';cx.fillRect(80,by+156,470,3);
  T((Z.gp||'').toUpperCase(),80,by+216,{size:46,fam:'D',w:700,maxW:470});T((Z.round||'').toUpperCase(),80,by+262,{size:32,w:400,maxW:470,col:'rgba(255,255,255,.85)'});
- if(IMG.lg)contain(IMG.lg,80,by+282,300,56)}
+ LGD(80,by+282,300,56)}
 function poleB(){const f=Z.type=='fastest';
- if(IMG.lg)contain(IMG.lg,240,36,600,90);else T(Z.series,W/2,100,{size:62,fam:'D',al:'center',maxW:900});
+ if(IMG.lg)LGD(240,36,600,90);else T(Z.series,W/2,100,{size:62,fam:'D',al:'center',maxW:900});
  if(Z.sub)T(Z.sub,W/2,150,{size:28,w:400,al:'center',maxW:800,col:'rgba(255,255,255,.85)'});
  const fx=70,fy=190,fw=940,fh=1000;fillRR(fx,fy,fw,fh,16,'rgba(8,30,52,.62)');cx.save();cx.strokeStyle='rgba(255,255,255,.28)';cx.lineWidth=3;rr(fx,fy,fw,fh,16);cx.stroke();cx.restore();
  if(!f){ // name | time bar on top, bracketed POLE
@@ -145,14 +178,14 @@ function poleB(){const f=Z.type=='fastest';
   cx.save();cx.strokeStyle='#fff';cx.lineWidth=12;cx.lineCap='square';cx.beginPath();cx.moveTo(300,360);cx.lineTo(240,360);cx.lineTo(240,640);cx.stroke();cx.beginPath();cx.moveTo(780,360);cx.lineTo(840,360);cx.lineTo(840,640);cx.stroke();cx.restore();
   T(Z.t1,W/2,640,{size:300,fam:'D',w:700,al:'center',maxW:500,st:1});
   if(Z.t2)T(Z.t2,W/2,700,{size:46,fam:'D',w:700,al:'center',ls:14,col:'rgba(255,255,255,.35)',maxW:500});
-  photo(IMG.ph,{x:260,y:420,w:560,h:770},{s:Z.ps,x:Z.px,y:Z.py});
+  photo(curPh(),{x:260,y:420,w:560,h:770},{s:Z.ps,x:Z.px,y:Z.py});
  }else{ // dial + FASTEST LAP
   cx.save();cx.strokeStyle='rgba(255,255,255,.3)';cx.lineWidth=3;cx.beginPath();cx.arc(W/2,720,360,Math.PI*1.12,Math.PI*1.88);cx.stroke();
   for(let i=0;i<=14;i++){const a=Math.PI*1.12+i*(Math.PI*.76/14);cx.beginPath();cx.moveTo(W/2+Math.cos(a)*350,720+Math.sin(a)*350);cx.lineTo(W/2+Math.cos(a)*376,720+Math.sin(a)*376);cx.stroke()}cx.restore();
   if(IMG.sp)contain(IMG.sp,fx+50,fy+40,150,150);
   T(Z.t1,fx+240,fy+120,{size:112,fam:'D',w:700,maxW:640,col:Z.ac});T(Z.t2,fx+240,fy+225,{size:112,fam:'D',w:700,maxW:420});
   cx.save();cx.fillStyle='#fff';for(let i=0;i<3;i++){const x=fx+240+Math.min(420,T(Z.t2,-9999,-9999,{size:112,fam:'D',w:700,maxW:420}))+30+i*52;cx.beginPath();cx.moveTo(x,fy+140);cx.lineTo(x+36,fy+140);cx.lineTo(x+68,fy+182);cx.lineTo(x+36,fy+224);cx.lineTo(x,fy+224);cx.lineTo(x+32,fy+182);cx.closePath();cx.fill()}cx.restore();
-  photo(IMG.ph,{x:240,y:330,w:600,h:820},{s:Z.ps,x:Z.px,y:Z.py});if(IMG.car)contain(IMG.car,110,900,860,170);
+  photo(curPh(),{x:240,y:330,w:600,h:820},{s:Z.ps,x:Z.px,y:Z.py});if(IMG.car)contain(IMG.car,110,900,860,170);
   fillRR(fx+30,fy+fh-110,fw-60,78,8,'rgba(4,16,30,.78)');
   T((Z.first||'').toUpperCase(),fx+60,fy+fh-58,{size:38,w:400,bl:'middle'});const w=T('',0,0,{});cx.save();cx.font=`400 38px ${FT()}`;const a=cx.measureText((Z.first||'').toUpperCase()+' ').width;cx.restore();
   T((Z.last||'').toUpperCase(),fx+60+a,fy+fh-58,{size:38,w:700,bl:'middle'});if(Z.value)T(Z.value,fx+fw-60,fy+fh-58,{size:42,w:700,al:'right',bl:'middle',col:Z.ac})}
@@ -160,89 +193,126 @@ function poleB(){const f=Z.type=='fastest';
  
  if(!f&&IMG.car===undefined){}
  cx.save();cx.strokeStyle='rgba(255,255,255,.2)';cx.lineWidth=3;for(let x=-H;x<W+60;x+=16){cx.beginPath();cx.moveTo(x,H);cx.lineTo(x+54,H-96);cx.stroke()}cx.restore();
+ {const tl=curTl();if(tl){const b=adj('tm',fx+fw-190,fy+22,150,100);contain(tl,b[0],b[1],b[2],b[3]);HIT.push({k:'tm',b})}}
  fillRR(0,H-110,W,110,0,'rgba(4,14,26,.62)');
  T(Z.f1,60,H-42,{size:54,fam:'D',w:700,it:1,col:Z.ac,maxW:520});T(Z.f2,W-60,H-44,{size:28,w:700,al:'right',maxW:420})}
 function gridA(){const D=parseGrid();
- if(IMG.lg)contain(IMG.lg,50,36,330,88);else T(Z.series,50,100,{size:40,fam:'D',maxW:340});
+ if(IMG.lg)LGD(50,36,330,88);else T(Z.series,50,100,{size:40,fam:'D',maxW:340});
  if(Z.gp||Z.round){let x=W-50;if(Z.round){const w=T(Z.round.toUpperCase(),0,0,{size:30,fam:'D',fill:false})+60;fillRR(x-w,36,w,54,6,Z.ac);T(Z.round.toUpperCase(),x-w/2,64,{size:30,fam:'D',al:'center',bl:'middle',col:'#fff'});x-=w+10}
   if(Z.gp){const w=T(Z.gp.toUpperCase(),0,0,{size:30,fam:'D',fill:false})+60;fillRR(x-w,36,w,54,6,'rgba(0,0,0,.8)');T(Z.gp.toUpperCase(),x-w/2,64,{size:30,fam:'D',al:'center',bl:'middle'})}}
  fillRR(46,150,720,128,8,'rgba(24,25,28,.94)');cx.fillStyle=Z.ac;cx.fillRect(46,150,12,128);
  T(Z.t1,86,236,{size:84,fam:'D',w:700,maxW:650});
- fillRR(46,300,988,H-300-46,22,'rgba(20,21,24,.9)');
- const n=D.length,rows=Math.max(1,Math.ceil(n/2)),area=H-300-46-60,rh=Math.min(104,area/(rows+.35)),x0=[84,560],cw=410;
- D.forEach((d,i)=>{const col=i%2,row=Math.floor(i/2),y=330+row*rh+(col?rh*.35:0),x=x0[col];
+ const n=D.length,rows=Math.max(1,Math.ceil(n/2)),reg=H-300-46,rh=Math.min(190,(reg-70)/(rows+.35)),blk=rows*rh+rh*.35,ph=Math.min(reg,blk+70),py=300+(reg-ph)/2,x0=[84,560],cw=410;
+ fillRR(46,py,988,ph,22,'rgba(20,21,24,.9)');
+ D.forEach((d,i)=>{const col=i%2,row=Math.floor(i/2),y=py+(ph-blk)/2+row*rh+(col?rh*.35:0),x=x0[col];
   cx.fillStyle='rgba(255,255,255,.07)';cx.fillRect(x,y+rh-4,cw+48,2);
-  T(String(i+1),x,y+rh*.44,{size:rh*.28,w:700,col:'rgba(255,255,255,.7)',bl:'middle'});
-  T((d.f||'').toUpperCase(),x+52,y+rh*.34,{size:rh*.23,w:400,bl:'middle',col:'rgba(255,255,255,.85)',maxW:cw-130});
-  T((d.l||'').toUpperCase(),x+52,y+rh*.7,{size:rh*.36,fam:'D',w:700,bl:'middle',maxW:cw-130});
-  badge(d.team,x+cw-rh*.64+34,y+rh*.1,rh*.66,tcol(d.team),6)})}
+  T(String(i+1),x,y+rh*.46,{size:rh*.3,w:700,col:'rgba(255,255,255,.7)',bl:'middle'});
+  T((d.f||'').toUpperCase(),x+Math.max(52,rh*.36),y+rh*.34,{size:rh*.2,w:400,bl:'middle',col:'rgba(255,255,255,.85)',maxW:cw-rh*.9});
+  T((d.l||'').toUpperCase(),x+Math.max(52,rh*.36),y+rh*.68,{size:rh*.32,fam:'D',w:700,bl:'middle',maxW:cw-rh*.9});
+  TB(d.team,x+cw+48-rh*.7,y+rh*.1,rh*.7,6)})}
 function gridB(){const D=parseGrid();
- if(IMG.lg)contain(IMG.lg,50,30,300,84);
+ if(IMG.lg)LGD(50,30,300,84);
  if(Z.round||Z.gp){const s=[Z.round,Z.gp].filter(Boolean).join('  |  ').toUpperCase(),w=T(s,0,0,{size:30,fam:'D',fill:false})+56;fillRR(W-50-w,36,w,56,6,'rgba(255,255,255,.95)');T(s,W-50-w/2,64,{size:30,fam:'D',al:'center',bl:'middle',col:'#0a1a3a'})}
  T(Z.t1,W/2,210,{size:78,fam:'D',w:700,al:'center',ls:10,maxW:960});if(Z.sub)T(Z.sub.toUpperCase(),W/2,270,{size:44,fam:'D',w:700,al:'center',ls:10,maxW:960,col:'rgba(255,255,255,.9)'});
- const n=D.length,rows=Math.max(1,Math.ceil(n/2)),top=330,area=H-top-150,rh=Math.min(104,area/(rows+.35)),ph=rh*.78,pw=420;
- D.forEach((d,i)=>{const col=i%2,row=Math.floor(i/2),y=top+row*rh+(col?rh*.4:0),px=col?600:60,nx=col?528:482,tcl=tcol(d.team);
+ const n=D.length,rows=Math.max(1,Math.ceil(n/2)),top=320,avail=H-top-140,rh=Math.min(210,avail/(rows+.5)),ph=Math.min(rh*.78,150),blk=rows*rh+rh*.5,oy=top+(avail-blk)/2,pw=372,nw=62;
+ D.forEach((d,i)=>{const col=i%2,row=Math.floor(i/2),y=oy+row*rh+(col?rh*.5:0),px=col?W-60-pw:60,nx=col?W-60-pw-nw-8:60+pw+8;
   fillRR(px,y,pw,ph,6,'#fff');
-  T((d.f||'').replace(/^(\w)/,c=>c.toUpperCase()),px+16,y+ph*.34,{size:ph*.26,w:400,col:'#111',bl:'middle',maxW:pw-130});
-  T((d.l||'').toUpperCase(),px+16,y+ph*.72,{size:ph*.4,fam:'D',w:700,col:'#000',bl:'middle',maxW:pw-130});
-  badge(d.team,px+pw-ph,y,ph,tcl,6);
-  fillRR(nx,y,52,ph,4,'rgba(255,255,255,.08)');cx.save();cx.strokeStyle='#fff';cx.lineWidth=3;cx.beginPath();cx.moveTo(nx,y+ph);cx.lineTo(nx,y);cx.lineTo(nx+52,y);cx.stroke();cx.restore();
-  T(String(i+1),nx+(col?10:42),y+ph*.55,{size:ph*.4,fam:'D',w:700,bl:'middle',al:col?'left':'right'});
-  if(d.pen){const w=124;fillRR(col?px+pw-w:px,y+ph-8,w,32,4,'#e10600');T('Grid Penalty '+d.pen,(col?px+pw-w:px)+w/2,y+ph+8,{size:15,w:700,al:'center',bl:'middle',col:'#fff'})}});
+  const tx=px+18,tm=pw-ph-36;
+  T((d.f||'').replace(/^(\w)/,c=>c.toUpperCase()),tx,y+ph*.33,{size:ph*.24,w:400,col:'#111',bl:'middle',maxW:tm});
+  T((d.l||'').toUpperCase(),tx,y+ph*.69,{size:ph*.38,fam:'D',w:700,col:'#000',bl:'middle',maxW:tm});
+  TB(d.team,px+pw-ph,y,ph,6);
+  fillRR(nx,y,nw,ph,4,'rgba(255,255,255,.12)');cx.save();cx.strokeStyle='#fff';cx.lineWidth=3;cx.beginPath();if(col){cx.moveTo(nx+nw,y);cx.lineTo(nx,y);cx.lineTo(nx,y+ph)}else{cx.moveTo(nx,y);cx.lineTo(nx+nw,y);cx.lineTo(nx+nw,y+ph)}cx.stroke();cx.restore();
+  T(String(i+1),nx+nw/2,y+ph*.54,{size:ph*.42,fam:'D',w:700,bl:'middle',al:'center',maxW:nw-10});
+  if(d.pen){const fs=Math.max(13,Math.min(18,(rh-ph)*.55)),tw=T('GRID PENALTY '+d.pen,0,0,{size:fs,w:700,fill:false}),w=Math.min(pw-40,tw+30),h=Math.min(36,Math.max(24,rh-ph+4)),tx2=col?px+pw-w:px,ty=y+ph-6;
+   fillRR(tx2,ty,w,h,4,'#e10600');T('GRID PENALTY '+d.pen,tx2+w/2,ty+h/2+1,{size:fs,w:700,al:'center',bl:'middle',col:'#fff',maxW:w-18})}});
  if(Z.series)T(Z.series.toUpperCase(),W/2,H-60,{size:36,fam:'D',w:700,al:'center',ls:6,maxW:700,col:'rgba(255,255,255,.95)'})}
 function lineup(){const L=parseLine();
+ LGD(40,30,240,84);
  T(Z.t1,W/2,130,{size:96,fam:'D',w:700,al:'center',col:Z.ac,maxW:960,ls:3});T(Z.t2,W/2,236,{size:100,fam:'D',w:700,al:'center',maxW:980,ls:3});
- const n=L.length,rows=Math.max(1,Math.ceil(n/2)),top=290,pitch=Math.min(255,(H-top-30)/rows),cw=480;
- L.forEach((t,i)=>{const col=i%2,row=Math.floor(i/2),x=col?560:40,y=top+row*pitch,col1=tcol(t.team),h=pitch-14;
-  const pb=h*.76;photo(IMG['p1:'+t.team],{x:x+6,y:y,w:cw*.5,h:pb},{s:1});photo(IMG['p2:'+t.team],{x:x+cw*.5-6,y:y,w:cw*.5,h:pb},{s:1});
+ const n=L.length,rows=Math.max(1,Math.ceil(n/2)),top=290,avail=H-top-30,pitch=Math.min(360,avail/rows),cw=480,oy=top+(avail-rows*pitch)/2;
+ L.forEach((t,i)=>{const col=i%2,row=Math.floor(i/2),alone=(i==n-1&&n%2==1),x=alone?(W-cw)/2:(col?560:40),y=oy+row*pitch,col1=tcol(t.team),h=pitch-14,tm=tmo(t.team)||{};
+  const pb=h*.76;photo(IMG['ph:'+t.d[0]],{x:x+6,y:y,w:cw*.5,h:pb},{s:1});photo(IMG['ph:'+t.d[1]],{x:x+cw*.5-6,y:y,w:cw*.5,h:pb},{s:1});
   fillRR(x+16,y+h*.46,cw-32,h*.28,0,col1);
-  const lg=IMG['tl:'+t.team];if(lg)contain(lg,x+cw/2-60,y+h*.43,120,h*.34);else T(t.team.toUpperCase(),x+cw/2,y+h*.6,{size:h*.15,fam:'D',al:'center',bl:'middle',maxW:200,col:'#fff'});
+  const lg=IMG['tl:'+t.team];if(lg){const k=tm.ls||1,lw=120*k,lh=h*.34*k;contain(lg,x+cw/2-lw/2,y+h*.6-lh/2,lw,lh)}else T((tm.name||'').toUpperCase(),x+cw/2,y+h*.6,{size:h*.15,fam:'D',al:'center',bl:'middle',maxW:200,col:'#fff'});
   fillRR(x,y+h*.74,cw,h*.28,4,'#fff');
-  t.d.forEach((nm,k)=>{const s=splitName(nm),ax=k?x+cw-16:x+16,al=k?'right':'left';
+  t.d.forEach((id,k)=>{const dd=drv(id)||{},s=[dd.first||'',dd.last||''],ax=k?x+cw-16:x+16,al=k?'right':'left';
    T(s[0],ax,y+h*.86,{size:h*.1,w:400,col:'#444',al,bl:'middle',maxW:cw/2-26});T((s[1]||'').toUpperCase(),ax,y+h*.96,{size:h*.15,fam:'D',w:700,col:col1,al,bl:'middle',maxW:cw/2-26})})})}
 function winnerA(){
- if(IMG.lg)contain(IMG.lg,340,34,400,84);
- photo(IMG.ph,{x:40,y:100,w:1000,h:1130},{s:Z.ps,x:Z.px,y:Z.py});
+ LGD(340,34,400,84);
+ photo(curPh(),{x:40,y:100,w:1000,h:1130},{s:Z.ps,x:Z.px,y:Z.py});
  const g=cx.createLinearGradient(0,H*.58,0,H);g.addColorStop(0,'rgba(24,8,60,0)');g.addColorStop(.5,'rgba(24,8,60,.75)');g.addColorStop(1,'rgba(24,8,60,.95)');cx.fillStyle=g;cx.fillRect(0,H*.58,W,H*.42);
  if(Z.label){const w=T(Z.label.toUpperCase(),0,0,{size:44,fam:'T',w:700,fill:false,ls:2})+80;fillRR(W/2-w/2,820,w,74,4,'#fff');T(Z.label.toUpperCase(),W/2,858,{size:44,w:700,al:'center',bl:'middle',col:'#111',ls:2})}
  T(Z.t1,W/2,1080,{size:260,fam:'D',w:700,al:'center',st:1.25,maxW:1000});
  T(Z.t2,W/2,1255,{size:230,fam:'D',w:700,al:'center',st:1.2,maxW:1000});
  T(((Z.first||'')+' '+(Z.last||'')).toUpperCase(),W/2,1312,{size:38,w:700,al:'center',ls:3,maxW:900})}
 function winnerB(){
- if(IMG.lg)contain(IMG.lg,40,34,260,100);
- photo(IMG.ph,{x:0,y:90,w:1080,h:1260},{s:Z.ps,x:Z.px,y:Z.py});
+ LGD(40,34,260,100);
+ photo(curPh(),{x:0,y:90,w:1080,h:1260},{s:Z.ps,x:Z.px,y:Z.py});
  if(Z.label){T(Z.label.toUpperCase(),60,610,{size:34,w:700,ls:2,maxW:600,sh:['rgba(0,0,0,.7)',10]})}
  const o=Z.fill?{col:'#fff'}:{fill:false,sw:8,sk:'#fff'};T(Z.t2,W/2,930,Object.assign({size:300,fam:'D',w:700,al:'center',st:1.2,maxW:1040},o));
  if(Z.t1)T(Z.t1,W/2,760,{size:50,fam:'D',w:700,al:'center',ls:6,col:Z.ac,maxW:900,sh:['rgba(0,0,0,.7)',10]});
  T((Z.last||'').toUpperCase(),W-60,1010,{size:100,fam:'D',w:700,al:'right',maxW:700,sh:['rgba(0,0,0,.65)',14]});
  T((Z.first||'').toUpperCase(),W-60,1060,{size:36,w:400,al:'right',ls:4,maxW:600,sh:['rgba(0,0,0,.65)',10]});
- const tl=IMG['tl:main'];if(tl)contain(tl,W-250,1210,200,110);if(Z.series)T(Z.series,60,H-48,{size:36,fam:'D',w:700,it:1,maxW:500})}
+ const tl=curTl();if(tl){const b=adj('tm',W-250,1210,200,110);contain(tl,b[0],b[1],b[2],b[3]);HIT.push({k:'tm',b})}if(Z.series)T(Z.series,60,H-48,{size:36,fam:'D',w:700,it:1,maxW:500})}
 const TPL={pole:[poleA,poleB],fastest:[poleA,poleB],grid:[gridA,gridB],lineup:[lineup],winner:[winnerA,winnerB]};
-function draw(){cx.clearRect(0,0,W,H);cx.save();drawBG();const f=(TPL[Z.type]||TPL.pole)[Math.min(Z.cn,(TPL[Z.type]||[]).length-1)];try{f()}catch(e){console.error(e)}cx.restore()}
+let DRAG=null;
+function draw(){HIT=[];cx.clearRect(0,0,W,H);cx.save();drawBG();const f=(TPL[Z.type]||TPL.pole)[Math.min(Z.cn,(TPL[Z.type]||[]).length-1)];try{f();drawSp()}catch(e){console.error(e)}
+ if(DRAG){const h=HIT.find(x=>x.k==DRAG.k);if(h){cx.save();cx.setLineDash([14,10]);cx.lineWidth=4;cx.strokeStyle='#ffd400';cx.strokeRect(h.b[0]-4,h.b[1]-4,h.b[2]+8,h.b[3]+8);cx.restore()}}
+ cx.restore()}
+/* drag any logo / sponsor directly on the poster */
+(()=>{const pt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]};
+ cv.style.touchAction='none';
+ cv.addEventListener('pointerdown',e=>{const[x,y]=pt(e);for(let i=HIT.length-1;i>=0;i--){const b=HIT[i].b;if(x>=b[0]&&x<=b[0]+b[2]&&y>=b[1]&&y<=b[1]+b[3]){DRAG={k:HIT[i].k,x,y};try{cv.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault();draw();return}}});
+ cv.addEventListener('pointermove',e=>{if(!DRAG)return;const[x,y]=pt(e),dx=x-DRAG.x,dy=y-DRAG.y;DRAG.x=x;DRAG.y=y;
+  if(DRAG.k.startsWith('sp:')){const q=SPL().find(z=>'sp:'+z.id==DRAG.k);if(q){q.x+=dx;q.y+=dy}}else{const a=AD(DRAG.k);a.x=(a.x||0)+dx;a.y=(a.y||0)+dy}
+  save();redraw()});
+ const end=()=>{if(DRAG){DRAG=null;redraw();if(tab==3)render()}};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end)})();
+
 const redraw=()=>{cancelAnimationFrame(rq);rq=requestAnimationFrame(draw)};
 /* ---------- UI ---------- */
-const TABS=['Jenis','Isi','Latar','Gaya'];let tab=0;
+const TABS=['Jenis','Isi','Data','Logo','Latar','Gaya'];let tab=0;
 const opts=(a,v)=>a.map(([k,n])=>`<option value="${esc(k)}" ${k==v?'selected':''}>${esc(n)}</option>`).join('');
 const fi=(k,l,ph)=>`<label>${l}</label><input type="text" data-k="${k}" value="${esc(Z[k])}" placeholder="${esc(ph||'')}">`;
 const up=(key,l,note)=>`<label>${l}${IMG[key]?'<span class="ok">terpasang</span>':''}</label><div class="row"><input type="file" accept="image/*" data-img="${esc(key)}"><button class="btn x" data-del="${esc(key)}">Hapus</button></div>${note?`<small>${note}</small>`:''}`;
 const rg=(k,l,min,max,st)=>`<label>${l}</label><input type="range" data-k="${k}" min="${min}" max="${max}" step="${st}" value="${Z[k]}">`;
 const col=(k,l)=>`<label>${l}</label><input type="color" data-k="${k}" value="${Z[k]}">`;
-function teamCards(){const names=teamNames();if(!names.length)return'';return`<div class="card"><h3>Tim</h3><small>Warna dan logo tiap tim (otomatis dari nama tim di daftar).</small>${names.map(n=>`<div style="margin-top:10px"><div class="tc"><input type="color" data-tc="${esc(n)}" value="${tcol(n)}"><b>${esc(n)}</b></div>${up('tl:'+n,'Logo '+esc(n))}${Z.type=='lineup'?up('p1:'+n,'Foto driver 1 (PNG tanpa latar)')+up('p2:'+n,'Foto driver 2 (PNG tanpa latar)'):''}</div>`).join('')}</div>`}
+const gp=(o,p)=>p.split('.').reduce((a,k)=>a==null?a:a[k],o);
+const sp2=(o,p,v)=>{const a=p.split('.'),l=a.pop();let c=o;a.forEach(k=>{c=c[k]==null?(c[k]={}):c[k]});c[l]=v};
+const pin=(p,l,ph)=>`<label>${l}</label><input type="text" data-pp="${p}" value="${esc(gp(P,p))}" placeholder="${esc(ph||'')}">`;
+const zr=(p,l,min,max,st,dv)=>{const v=gp(Z,p);return`<label>${l}</label><input type="range" data-zp="${p}" min="${min}" max="${max}" step="${st}" value="${v==null?dv:v}">`};
+const prg=(p,l,min,max,st,dv)=>{const v=gp(P,p);return`<label>${l}</label><input type="range" data-pp="${p}" min="${min}" max="${max}" step="${st}" value="${v==null?dv:v}">`};
+const tOpts=()=>[['','— pilih tim —']].concat(P.teams.map(t=>[t.id,t.name]));
+const dOpts=()=>[['','— pilih pembalap —']].concat(P.drivers.map(d=>[d.id,dFull(d)+(d.team&&tmo(d.team)?' · '+tmo(d.team).name:'')]));
+const dsel=(attr,v)=>`<select ${attr} data-cb="1">${opts(dOpts(),v||'')}</select>`;
+const upP=(key,l,note)=>`<label>${l}${IMG[key]?'<span class="ok">terpasang</span>':''}</label><div class="row"><input type="file" accept="image/*" data-img="${esc(key)}"><button class="btn x" data-del="${esc(key)}">Hapus</button></div>${note?`<small>${note}</small>`:''}`;
+const col2=(l,v,k)=>`<label>${l}</label><input type="color" data-k="${k}" value="${v}">`;
+function ensureRows(){Z.gn=Math.max(2,Math.min(10,Z.gn||10));Z.ln=Math.max(5,Math.min(10,Z.ln||10));Z.grid=Z.grid||[];Z.line=Z.line||[];
+ while(Z.grid.length<10)Z.grid.push({d:'',pen:''});while(Z.line.length<10)Z.line.push({t:'',d1:'',d2:''})}
+function pickDriver(id){Z.drv=id;const d=drv(id);if(d){Z.first=d.first||'';Z.last=d.last||''}}
+const drvPick=()=>`<div class="card"><h3>Pembalap utama</h3><small>Pilih dari daftar (tab Data). Nama, foto, logo &amp; warna tim terisi otomatis.</small>${dsel('data-drv="1"',Z.drv)}${Z.drv?'':'<small>Belum dipilih: pakai nama &amp; foto manual di bawah.</small>'}</div>`;
+function panelData(){return`<div class="card"><h3>Data pembalap &amp; tim</h3><small>Isi sekali di sini, lalu dipakai di semua poster di alat ini.</small><button class="btn ac" data-imp="1" style="width:100%;margin-top:8px">Ambil driver &amp; tim dari fRacing Legends</button></div>
+<div class="card" data-flb><h3>Tim (${P.teams.length})</h3>${fltBox('pc:teams','Cari tim...')}${P.teams.map((t,i)=>`<div class="card" data-fi style="margin:8px 0 0"><div class="tc"><input type="color" data-pp="teams.${i}.c" value="${/^#[0-9a-f]{6}$/i.test(t.c||'')?t.c:'#444444'}"><b>${esc(t.name||'(tanpa nama)')}</b><button class="btn x" data-delt="${i}" style="min-height:36px">Hapus</button></div>${pin('teams.'+i+'.name','Nama tim')}${upP('tl:'+t.id,'Logo tim')}${prg('teams.'+i+'.ls','Ukuran logo',.4,2,.02,1)}<label><input type="checkbox" data-ppc="teams.${i}.nb" ${t.nb?'checked':''} style="width:auto;margin-right:8px">Tanpa kotak warna di belakang logo</label></div>`).join('')}<button class="btn" data-addt="1" style="width:100%;margin-top:10px">+ Tambah tim</button></div>
+<div class="card" data-flb><h3>Pembalap (${P.drivers.length})</h3>${fltBox('pc:drivers','Cari pembalap atau tim...')}${P.drivers.map((d,i)=>`<div class="card" data-fi style="margin:8px 0 0"><div class="tc"><b>${esc(dFull(d)||'(tanpa nama)')}</b><button class="btn x" data-deld="${i}" style="min-height:36px">Hapus</button></div>${pin('drivers.'+i+'.first','Nama depan')}${pin('drivers.'+i+'.last','Nama belakang')}<label>Tim</label><select data-pp="drivers.${i}.team" data-cb="1">${opts(tOpts(),d.team||'')}</select>${upP('ph:'+d.id,'Foto pembalap','PNG tanpa latar paling bagus.')}</div>`).join('')}<button class="btn" data-addd="1" style="width:100%;margin-top:10px">+ Tambah pembalap</button></div>`}
+function panelLogo(){const t=Z.type,c=Z.cn,K=LK();let h=`<div class="card"><h3>Logo liga / seri</h3>${upP('lg','Logo liga','PNG transparan paling bagus.')}${fi('series','Nama seri (jika tanpa logo)','F1 CHAMPIONS')}${IMG.lg?`<small>Geser langsung di poster dengan jari, atau pakai slider.</small>${zr('ad.'+K+':lg.s','Ukuran',.3,3,.02,1)}${zr('ad.'+K+':lg.x','Geser kiri / kanan',-600,600,2,0)}${zr('ad.'+K+':lg.y','Geser atas / bawah',-600,600,2,0)}<button class="btn" data-adr="lg" style="margin-top:8px">Kembalikan posisi</button>`:''}</div>`;
+ if(t=='pole'||t=='fastest'||t=='winner'){const d=drv(Z.drv),has=(t=='pole')||(t=='fastest')||(t=='winner'&&c==1);
+  h+=`<div class="card"><h3>Logo tim pembalap utama</h3>${d&&d.team&&IMG['tl:'+d.team]?`<small>Logo diambil dari tim pembalap ini (tab Data).</small>`:upP('tl:main','Logo tim (manual)','Atau pilih pembalap di tab Isi agar otomatis.')}${has?`${zr('ad.'+K+':tm.s','Ukuran',.3,3,.02,1)}${zr('ad.'+K+':tm.x','Geser kiri / kanan',-700,700,2,0)}${zr('ad.'+K+':tm.y','Geser atas / bawah',-700,700,2,0)}<button class="btn" data-adr="tm" style="margin-top:8px">Kembalikan posisi</button>`:'<small>Konsep ini tidak menampilkan logo tim.</small>'}${t=='pole'&&c==0?`<label><input type="checkbox" data-k="tlbox" ${Z.tlbox!==false?'checked':''} style="width:auto;margin-right:8px">Pakai kotak warna di belakang logo</label><small>Matikan agar logo menyatu dengan kotak hitam transparan.</small>${col2('Warna kotak logo',mainCol(),'tmcMain')}<button class="btn" data-tmcauto="1" style="margin-top:8px">Warna otomatis dari tim</button>`:''}</div>`}
+ if(t=='grid'||t=='lineup')h+=`<div class="card"><h3>Logo tim</h3><small>Logo tiap tim diatur di tab Data (ukuran &amp; ada/tidaknya kotak warna).</small></div>`;
+ const L=SPL();h+=`<div class="card"><h3>Logo sponsor (poster ini)</h3><small>Tambah sebanyak yang kamu mau. Geser langsung di poster, atau pakai slider.</small>${L.map((q,i)=>`<div class="card" style="margin:8px 0 0"><div class="tc"><b>Sponsor ${i+1}</b><button class="btn x" data-delsp="${i}" style="min-height:36px">Hapus</button></div>${upP('sp:'+q.id,'Gambar sponsor')}${zr('sp.'+K+'.'+i+'.h','Ukuran (tinggi)',20,500,2,90)}${zr('sp.'+K+'.'+i+'.x','Posisi kiri / kanan',0,W,2,540)}${zr('sp.'+K+'.'+i+'.y','Posisi atas / bawah',0,H,2,1280)}</div>`).join('')}<button class="btn" data-addsp="1" style="width:100%;margin-top:10px">+ Tambah logo sponsor</button></div>`;
+ return h}
 function panelJenis(){const t=Z.type;return`<div class="card"><h3>Jenis poster</h3><div class="g2">${TYPES.map(([k,n])=>`<button class="btn ${k==t?'sel':''}" data-type="${k}">${n}</button>`).join('')}</div></div>
 <div class="card"><h3>Konsep desain</h3><div class="g2">${CONC[t].map((n,i)=>`<button class="btn ${i==Z.cn?'sel':''}" data-cn="${i}">${i+1}. ${n}</button>`).join('')}</div><small>Setiap jenis punya konsep berbeda untuk tingkat kejuaraan yang berbeda.</small></div>
-<div class="card"><h3>Logo liga</h3>${up('lg','Logo liga / seri','PNG transparan paling bagus. Dipakai di bagian atas poster.')}${fi('series','Nama seri (jika tanpa logo)','F1 CHAMPIONS')}</div>
 <div class="card"><button class="btn x" data-reset="1" style="width:100%">Reset ke contoh awal</button></div>`}
-function panelIsi(){const t=Z.type,c=Z.cn;let h='';
- if(t=='pole'||t=='fastest'){h+=`<div class="card"><h3>Isi poster</h3>${fi('t1','Judul baris 1')}${fi('t2','Judul baris 2')}${fi('first','Nama depan')}${fi('last','Nama belakang')}${fi('value','Waktu / nilai','1:09.139')}${fi('gp','Nama GP / sirkuit')}${fi('round','Ronde','ROUND 13')}`;
+function panelIsi(){const t=Z.type,c=Z.cn;let h='';ensureRows();
+ if(t=='pole'||t=='fastest'){h+=drvPick()+`<div class="card"><h3>Isi poster</h3>${fi('t1','Judul baris 1')}${fi('t2','Judul baris 2')}${fi('first','Nama depan')}${fi('last','Nama belakang')}${fi('value','Waktu / nilai','1:09.139')}${fi('gp','Nama GP / sirkuit')}${fi('round','Ronde','ROUND 13')}`;
   if(c==0)h+=fi('spon','Teks sponsor (atas panel)');else{h+=fi('sub','Teks kecil di atas bingkai');h+=fi('f1','Teks bawah kiri');h+=fi('f2','Teks bawah kanan')}h+='</div>';
-  h+=`<div class="card"><h3>Foto driver</h3>${up('ph','Foto driver','Pakai PNG tanpa latar (cutout) untuk hasil terbaik.')}${rg('ps','Ukuran',.4,2.2,.01)}${rg('px','Geser kiri / kanan',-.6,.6,.01)}${rg('py','Geser atas / bawah',-.6,.6,.01)}</div>`;
-  h+=`<div class="card"><h3>Tim dan gambar</h3>${up('tl:main','Logo tim')}${col('tmcMain','Warna kotak logo tim')}${c==1&&t=='pole'?up('car','Foto mobil (PNG tanpa latar)'):''}${c==1&&t=='fastest'?up('sp','Logo sponsor (kiri atas bingkai)')+up('car','Foto mobil (opsional)'):''}</div>`}
- if(t=='winner'){h+=`<div class="card"><h3>Isi poster</h3>${fi('first','Nama depan')}${fi('last','Nama belakang')}${fi('label','Label (negara / sesi)','INDONESIA')}${fi('t1',c==0?'Teks besar baris 1':'Teks kecil atas (opsional)')}${fi('t2',c==0?'Teks besar baris 2':'Teks besar WINNER')}${c==1?`<label><input type="checkbox" data-k="fill" ${Z.fill?'checked':''} style="width:auto;margin-right:8px">Isi teks besar (bukan hanya garis)</label>`:''}</div>
-  <div class="card"><h3>Foto driver</h3>${up('ph','Foto driver','PNG tanpa latar paling bagus.')}${rg('ps','Ukuran',.4,2.2,.01)}${rg('px','Geser kiri / kanan',-.6,.6,.01)}${rg('py','Geser atas / bawah',-.6,.6,.01)}</div>${c==1?`<div class="card"><h3>Logo tim</h3>${up('tl:main','Logo tim (kanan bawah)')}</div>`:''}`}
+  h+=`<div class="card"><h3>Foto pembalap</h3>${Z.drv&&IMG['ph:'+Z.drv]?'<small>Foto diambil dari data pembalap (tab Data).</small>':upP('ph','Foto manual','Pakai PNG tanpa latar (cutout) untuk hasil terbaik.')}${rg('ps','Ukuran',.4,2.2,.01)}${rg('px','Geser kiri / kanan',-.6,.6,.01)}${rg('py','Geser atas / bawah',-.6,.6,.01)}</div>`;
+  if(c==1)h+=`<div class="card"><h3>Gambar tambahan</h3>${t=='pole'?upP('car','Foto mobil (PNG tanpa latar)'):upP('sp','Logo di kiri atas bingkai')+upP('car','Foto mobil (opsional)')}</div>`}
+ if(t=='winner'){h+=drvPick()+`<div class="card"><h3>Isi poster</h3>${fi('first','Nama depan')}${fi('last','Nama belakang')}${fi('label','Label (negara / sesi)','INDONESIA')}${fi('t1',c==0?'Teks besar baris 1':'Teks kecil atas (opsional)')}${fi('t2',c==0?'Teks besar baris 2':'Teks besar WINNER')}${c==1?`<label><input type="checkbox" data-k="fill" ${Z.fill?'checked':''} style="width:auto;margin-right:8px">Isi huruf WINNER (bukan garis)</label>`:''}</div>
+  <div class="card"><h3>Foto pembalap</h3>${Z.drv&&IMG['ph:'+Z.drv]?'<small>Foto diambil dari data pembalap (tab Data).</small>':upP('ph','Foto manual','PNG tanpa latar paling bagus.')}${rg('ps','Ukuran',.4,2.2,.01)}${rg('px','Geser kiri / kanan',-.6,.6,.01)}${rg('py','Geser atas / bawah',-.6,.6,.01)}</div>`}
  if(t=='grid'){h+=`<div class="card"><h3>Judul</h3>${fi('t1','Judul','STARTING GRID')}${fi('gp','Nama GP / sirkuit','JEDDAH')}${fi('round','Ronde','ROUND 4')}${c==1?fi('sub','Sub judul','E-PRIX MIAMI 2026'):''}</div>
-  <div class="card"><h3>Daftar grid</h3><small>Satu baris per driver, urut dari posisi 1. Format: Nama | Tim | Penalti (opsional)</small><textarea data-k="gl" spellcheck="false">${esc(Z.gl)}</textarea><small>Nama dengan dua kata belakang: tulis Depan/Belakang Panjang. Penalti contoh: +3</small></div>${teamCards()}`}
+  <div class="card"><h3>Urutan grid</h3><small>Maksimal 10 pembalap. Pilih pembalap tiap posisi (ketik untuk mencari). Isi penalti jika ada, contoh +3.</small><div class="g3" style="margin:8px 0">${[4,6,8,10].map(n=>`<button class="btn ${Z.gn==n?'sel':''}" data-gn="${n}">${n} pembalap</button>`).join('')}</div>${P.drivers.length?'':'<small>Daftar pembalap masih kosong. Isi di tab Data.</small>'}${Z.grid.slice(0,Z.gn).map((r,i)=>`<div class="card" style="margin:8px 0 0"><b>P${i+1}</b>${dsel('data-gd="'+i+'"',r.d)}<label>Penalti (opsional)</label><input type="text" data-gpen="${i}" value="${esc(r.pen)}" placeholder="+3"></div>`).join('')}</div>`}
  if(t=='lineup'){h+=`<div class="card"><h3>Judul</h3>${fi('t1','Baris 1','SEASON 12')}${fi('t2','Baris 2','DRIVER LINE-UP')}</div>
-  <div class="card"><h3>Daftar tim</h3><small>Satu baris per tim. Format: Tim | Driver 1 | Driver 2</small><textarea data-k="ll" spellcheck="false">${esc(Z.ll)}</textarea></div>${teamCards()}`}
+  <div class="card"><h3>Susunan tim</h3><small>Minimal 5, maksimal 10 tim. Desain menyesuaikan jumlah tim.</small><div class="g3" style="margin:8px 0">${[5,6,7,8,9,10].map(n=>`<button class="btn ${Z.ln==n?'sel':''}" data-ln="${n}">${n} tim</button>`).join('')}</div>${Z.line.slice(0,Z.ln).map((r,i)=>`<div class="card" style="margin:8px 0 0"><b>Tim ${i+1}</b><label>Tim</label><select data-lt="${i}" data-cb="1">${opts(tOpts(),r.t)}</select><label>Pembalap 1</label>${dsel('data-ld="'+i+'.d1"',r.d1)}<label>Pembalap 2</label>${dsel('data-ld="'+i+'.d2"',r.d2)}</div>`).join('')}</div>`}
  return h}
 function panelLatar(){const m=Z.bgm;return`<div class="card"><h3>Latar poster</h3><div class="g3"><button class="btn ${m=='preset'?'sel':''}" data-bgm="preset">Desain</button><button class="btn ${m=='custom'?'sel':''}" data-bgm="custom">Gambar sendiri</button><button class="btn ${m=='flat'?'sel':''}" data-bgm="flat">Satu warna</button></div></div>
 ${m=='preset'?`<div class="card"><h3>Desain latar</h3><label>Pilih desain</label><select data-k="bgk" data-bgsel="1">${opts(BGN,Z.bgk)}</select>${col('bg1','Warna utama')}${col('bg2','Warna aksen')}<button class="btn" data-bgdef="1" style="margin-top:10px;width:100%">Pakai warna bawaan desain ini</button></div>`:''}
@@ -253,7 +323,7 @@ function panelGaya(){return`<div class="card"><h3>Warna</h3>${col('ac','Warna ak
 <label>Tambah font sendiri (.ttf .otf .woff)</label><input type="file" accept=".ttf,.otf,.woff,.woff2" data-font="1">${rg('fs','Ukuran teks keseluruhan',.6,1.3,.01)}</div>`}
 const EXTRA=[];const fontList=()=>[['MotoGP Display','MotoGP Display'],['MotoGP Text','MotoGP Text'],['Impact','Impact'],['Arial Black','Arial Black'],['Georgia','Georgia'],['system-ui','Sans-serif sistem']].concat(EXTRA.map(n=>[n,n]));
 function render(){$('#tabs').innerHTML=TABS.map((n,i)=>`<button class="${i==tab?'on':''}" data-tab="${i}">${n}</button>`).join('');
- $('#panels').innerHTML=`<div class="p on">${[panelJenis,panelIsi,panelLatar,panelGaya][tab]()}</div>`}
+ $('#panels').innerHTML=`<div class="p on">${[panelJenis,panelIsi,panelData,panelLogo,panelLatar,panelGaya][tab]()}</div>`}
 function setType(t){Z.type=t;Z.cn=0;applyDef()}
 function applyDef(){const d=DD[Z.type];Z.t1=d.t1;Z.t2=d.t2;const k=d.bg[Math.min(Z.cn,d.bg.length-1)];Z.bgk=k;Z.bg1=BGDEF[k][0];Z.bg2=BGDEF[k][1];Z.bgm=Z.bgm=='custom'?'custom':'preset';
  if(Z.type=='fastest'){Z.value='1:11.255';Z.first='Stoffel';Z.last='Vandoorne';Z.gp='';Z.round='ROUND SIX';Z.f1='ROUND SIX'}else if(Z.type=='pole'){Z.value='1:09.139';Z.first='Felipe';Z.last='Drugovich';Z.gp='SHANGHAI';Z.round='ROUND 13'}
@@ -261,26 +331,65 @@ function applyDef(){const d=DD[Z.type];Z.t1=d.t1;Z.t2=d.t2;const k=d.bg[Math.min
  if(Z.type=='grid'){Z.t1=Z.cn?'FINAL STARTING GRID':'STARTING GRID';Z.gp='JEDDAH';Z.round='ROUND 4';Z.sub=Z.cn?'E-PRIX MIAMI 2026':''}
  if(Z.type=='winner'&&Z.cn==1)Z.t1=''
  Z.ac=Z.type=='winner'&&Z.cn==0?'#ffffff':(Z.cn==1&&Z.type=='winner'?'#ff6b3d':'#1d9ad6')}
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
- if(b.dataset.tab!==undefined){tab=+b.dataset.tab;render();scrollTo(0,0)}
- else if(b.dataset.type){setType(b.dataset.type);save();render();redraw()}
- else if(b.dataset.cn!==undefined){Z.cn=+b.dataset.cn;applyDef();save();render();redraw()}
- else if(b.dataset.bgm){Z.bgm=b.dataset.bgm;save();render();redraw()}
- else if(b.dataset.bgdef){const d=BGDEF[Z.bgk];Z.bg1=d[0];Z.bg2=d[1];save();render();redraw()}
- else if(b.dataset.del){delete IMG[b.dataset.del];render();redraw()}
- else if(b.dataset.reset){Z=Object.assign({},BASE);setType('pole');save();render();redraw()}
- else if(b.dataset.save){draw();cv.toBlob(bl=>{const a=document.createElement('a'),f=b.dataset.save;a.href=URL.createObjectURL(bl);a.download='poster-'+Z.type+'-'+(Z.cn+1)+'.'+f;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2500)},b.dataset.save=='png'?'image/png':'image/jpeg',.95)}});
-document.addEventListener('input',e=>{const t=e.target;
- if(t.dataset.k){const k=t.dataset.k;Z[k]=t.type=='checkbox'?t.checked:t.type=='range'?parseFloat(t.value):t.value;if(k=='tmcMain'){Z.tmc.main=t.value}save();redraw()}
- else if(t.dataset.tc){Z.tmc[t.dataset.tc]=t.value;save();redraw()}});
+const uid=p=>p+Date.now().toString(36)+Math.floor(Math.random()*1e3).toString(36);
+const dropImg=k=>{delete IMG[k];delete P.img[k]};
+function importHub(){let h;try{h=JSON.parse(localStorage.getItem('f1c-hub'))}catch(e){}
+ if(!h||!h.drivers||!h.drivers.length){alert('Data fRacing Legends belum ada. Isi dulu dari menu utama.');return}
+ if(!confirm('Ganti daftar pembalap & tim dengan data fRacing Legends? Foto dan logo dengan nama sama tetap dipakai.'))return;
+ const L=v=>String(v||'').trim().toLowerCase(),oldT=P.teams,oldD=P.drivers,oldImg=Object.assign({},P.img),keep={};
+ const teams=h.teams.map((t,i)=>{const o=oldT.find(x=>L(x.name)==L(t.name)),id=o?o.id:uid('t'+i);if(o&&P.img['tl:'+o.id])keep['tl:'+id]=P.img['tl:'+o.id];return{id,name:t.name,c:t.col||PAL[i%PAL.length],ls:o?o.ls:1,nb:o?o.nb:false}});
+ const drivers=h.drivers.map((d,i)=>{const w=String(d.name).trim().split(/\s+/),o=oldD.find(x=>L(dFull(x))==L(d.name)),t=teams.find(x=>L(x.name)==L(d.team)),id=o?o.id:uid('d'+i);if(o&&P.img['ph:'+o.id])keep['ph:'+id]=P.img['ph:'+o.id];const last=w.length>1?w.pop():w.pop();return{id,first:w.join(' '),last,team:t?t.id:''}});
+ Object.keys(P.img).forEach(k=>{if(/^(tl|ph):/.test(k)&&!keep[k]&&k!='tl:main'){delete P.img[k];delete IMG[k]}});
+ Object.keys(keep).forEach(k=>{P.img[k]=keep[k];imgFrom(k,keep[k]).then(redraw)});
+ P.teams=teams;P.drivers=drivers;Z.grid=[];Z.line=[];Z.drv='';
+ /* default fill: first drivers in order, teams in order */
+ Z.grid=drivers.slice(0,10).map(d=>({d:d.id,pen:''}));
+ Z.line=teams.slice(0,10).map(t=>{const ds=drivers.filter(d=>d.team==t.id);return{t:t.id,d1:(ds[0]||{}).id||'',d2:(ds[1]||{}).id||''}});
+ Z.gn=Math.max(2,Math.min(10,Z.grid.length));Z.ln=Math.max(5,Math.min(10,Z.line.length));ensureRows();save();render();redraw()}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+ if(d.tab!==undefined){tab=+d.tab;render();scrollTo(0,0)}
+ else if(d.type){setType(d.type);save();render();redraw()}
+ else if(d.cn!==undefined){Z.cn=+d.cn;applyDef();save();render();redraw()}
+ else if(d.bgm){Z.bgm=d.bgm;save();render();redraw()}
+ else if(d.bgdef){const x=BGDEF[Z.bgk];Z.bg1=x[0];Z.bg2=x[1];save();render();redraw()}
+ else if(d.del){dropImg(d.del);save();render();redraw()}
+ else if(d.reset){const keepSp=Z.sp;Z=Object.assign({},BASE,{tmc:{}});Z.grid=P.drivers.slice(0,10).map(x=>({d:x.id,pen:''}));Z.line=P.teams.slice(0,10).map(t=>{const ds=P.drivers.filter(x=>x.team==t.id);return{t:t.id,d1:(ds[0]||{}).id||'',d2:(ds[1]||{}).id||''}});Z.gn=Math.min(10,Math.max(2,Z.grid.length||10));Z.ln=Math.min(10,Math.max(5,Z.line.length||10));setType('pole');ensureRows();save();render();redraw()}
+ else if(d.imp){importHub()}
+ else if(d.addt){P.teams.push({id:uid('t'),name:'Tim baru',c:PAL[P.teams.length%PAL.length],ls:1});save();render()}
+ else if(d.addd){P.drivers.push({id:uid('d'),first:'',last:'Pembalap baru',team:''});save();render()}
+ else if(d.delt!==undefined){const t=P.teams[+d.delt];if(t&&confirm('Hapus tim '+t.name+'?')){dropImg('tl:'+t.id);P.teams.splice(+d.delt,1);P.drivers.forEach(x=>{if(x.team==t.id)x.team=''});Z.line.forEach(r=>{if(r.t==t.id)r.t=''});save();render();redraw()}}
+ else if(d.deld!==undefined){const x=P.drivers[+d.deld];if(x&&confirm('Hapus '+(dFull(x)||'pembalap ini')+'?')){dropImg('ph:'+x.id);P.drivers.splice(+d.deld,1);Z.grid.forEach(r=>{if(r.d==x.id)r.d=''});Z.line.forEach(r=>{if(r.d1==x.id)r.d1='';if(r.d2==x.id)r.d2=''});if(Z.drv==x.id)Z.drv='';save();render();redraw()}}
+ else if(d.adr){if(Z.ad)delete Z.ad[LK()+':'+d.adr];save();render();redraw()}
+ else if(d.tmcauto){delete Z.tmc.main;save();render();redraw()}
+ else if(d.gn){Z.gn=+d.gn;save();render();redraw()}
+ else if(d.ln){Z.ln=+d.ln;save();render();redraw()}
+ else if(d.addsp){const L=SPL(),n=L.length;L.push({id:uid('s'),x:200+(n%4)*230,y:H-90,h:90});save();render();redraw()}
+ else if(d.delsp!==undefined){const L=SPL(),q=L[+d.delsp];if(q){dropImg('sp:'+q.id);L.splice(+d.delsp,1);save();render();redraw()}}
+ else if(d.save){DRAG=null;draw();cv.toBlob(bl=>{const a=document.createElement('a'),f=d.save;a.href=URL.createObjectURL(bl);a.download='poster-'+Z.type+'-'+(Z.cn+1)+'.'+f;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2500)},d.save=='png'?'image/png':'image/jpeg',.95)}});
+document.addEventListener('input',e=>{const t=e.target,d=t.dataset;
+ if(d.k){const k=d.k;Z[k]=t.type=='checkbox'?t.checked:t.type=='range'?parseFloat(t.value):t.value;if(k=='tmcMain'){Z.tmc.main=t.value}save();redraw()}
+ else if(d.pp){sp2(P,d.pp,t.type=='range'?parseFloat(t.value):t.value);save();redraw()}
+ else if(d.zp){sp2(Z,d.zp,parseFloat(t.value));save();redraw()}
+ else if(d.gpen!==undefined){Z.grid[+d.gpen].pen=t.value;save();redraw()}
+ else if(d.tc){Z.tmc[d.tc]=t.value;save();redraw()}});
 const defer=()=>setTimeout(()=>{render();redraw()},0);
-document.addEventListener('change',e=>{const t=e.target;
- if(t.dataset.img&&t.files&&t.files[0]){const k=t.dataset.img,u=URL.createObjectURL(t.files[0]),im=new Image();im.onload=()=>{IMG[k]=im;defer()};im.src=u}
- else if(t.dataset.font&&t.files&&t.files[0]){const f=t.files[0],nm=f.name.replace(/\.[^.]+$/,''),r=new FileReader();r.onload=()=>{new FontFace(nm,r.result).load().then(ff=>{document.fonts.add(ff);if(!EXTRA.includes(nm))EXTRA.push(nm);Z.fd=nm;defer()}).catch(()=>alert('Font tidak bisa dibaca.'))};r.readAsArrayBuffer(f)}
- else if(t.dataset.k&&(t.dataset.r||t.dataset.bgsel)){const k=t.dataset.k;Z[k]=t.value;if(t.dataset.bgsel){const d=BGDEF[Z.bgk];Z.bg1=d[0];Z.bg2=d[1]}save();defer()}
- else if(t.dataset.k=='gl'||t.dataset.k=='ll'){save();defer()}
- else if(t.dataset.k&&t.type=='checkbox'){Z[t.dataset.k]=t.checked;save();redraw()}});
+document.addEventListener('change',e=>{const t=e.target,d=t.dataset;
+ if(d.img&&t.files&&t.files[0]){const k=d.img;packImg(t.files[0],dsz(k)).then(u=>{if(!u)return;P.img[k]=u;return imgFrom(k,u)}).then(()=>{save();defer()})}
+ else if(d.font&&t.files&&t.files[0]){const f=t.files[0],nm=f.name.replace(/\.[^.]+$/,''),r=new FileReader();r.onload=()=>{new FontFace(nm,r.result).load().then(ff=>{document.fonts.add(ff);if(!EXTRA.includes(nm))EXTRA.push(nm);Z.fd=nm;defer()}).catch(()=>alert('Font tidak bisa dibaca.'))};r.readAsArrayBuffer(f)}
+ else if(d.k&&(d.r||d.bgsel)){const k=d.k;Z[k]=t.value;if(d.bgsel){const x=BGDEF[Z.bgk];Z.bg1=x[0];Z.bg2=x[1]}save();defer()}
+ else if(d.drv){pickDriver(t.value);save();defer()}
+ else if(d.gd!==undefined){Z.grid[+d.gd].d=t.value;save();redraw()}
+ else if(d.lt!==undefined){const r=Z.line[+d.lt];r.t=t.value;const ds=P.drivers.filter(x=>x.team==t.value);if(!r.d1&&ds[0])r.d1=ds[0].id;if(!r.d2&&ds[1])r.d2=ds[1].id;save();defer()}
+ else if(d.ld){const a=d.ld.split('.');Z.line[+a[0]][a[1]]=t.value;save();redraw()}
+ else if(d.ppc){sp2(P,d.ppc,t.checked);save();redraw()}
+ else if(d.pp&&t.tagName=='SELECT'){sp2(P,d.pp,t.value);save();redraw()}
+ else if(d.k&&t.type=='checkbox'){Z[d.k]=t.checked;save();redraw()}});
 const q=new URLSearchParams(location.search).get('t');if(q&&DD[q]&&q!=Z.type){Z.type=q;Z.cn=0;applyDef()}
 Z.tmc=Z.tmc||{};
-(async()=>{try{await Promise.all([document.fonts.load('700 40px "MotoGP Display"'),document.fonts.load('400 40px "MotoGP Text"'),document.fonts.load('700 40px "MotoGP Text"')])}catch(e){}render();draw()})();
-</script><script src="/owner/tools/prev.js"></script></body></html>
+(async()=>{try{await Promise.all([document.fonts.load('700 40px "MotoGP Display"'),document.fonts.load('400 40px "MotoGP Text"'),document.fonts.load('700 40px "MotoGP Text"')])}catch(e){}
+ const st=await loadP();if(st&&st.P){P=Object.assign({teams:[],drivers:[],img:{}},st.P);P.img=P.img||{};if(!Z.grid&&st.Z)Z=Object.assign({},BASE,st.Z,{tmc:st.Z.tmc||{}})}
+ Z.tmc=Z.tmc||{};
+ await Promise.all(Object.entries(P.img).map(([k,u])=>imgFrom(k,u)));
+ if(!Z.grid){if(!P.drivers.length&&!P.teams.length)seedData();else{Z.grid=[];Z.line=[]}}
+ ensureRows();render();draw();save()})();
+</script><script src="/owner/tools/combo.js"></script><script src="/owner/tools/prev.js"></script></body></html>
