@@ -1,6 +1,6 @@
 /* Saves a small preview of the poster canvas so the Tools menu can show the latest result. */
 (function(){
-  var id=location.pathname.split('/').slice(-2)[0],K='f1c-prev:'+id,t,dirty=false;
+  var id=new URLSearchParams(location.search).get('pv')||location.pathname.split('/').slice(-2)[0],K='f1c-prev:'+id,t,dirty=false;
   function cv(){return document.getElementById('cv')||document.getElementById('c')||document.querySelector('canvas')}
   function snap(){
     if(!dirty)return;

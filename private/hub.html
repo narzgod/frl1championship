@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0707">
-<title>Owner - F1C Tools</title>
+<title>Owner - Narzgod Tools</title>
 <meta name="robots" content="noindex,nofollow">
 <style>
 @font-face{font-family:"MotoGP Display";src:url(/owner/tools/race-result/MotoGP_Display_Bold.ttf);font-weight:700}
@@ -26,6 +26,8 @@ body{background:#0b0707 radial-gradient(ellipse at top,#3a0b0b 0%,#0b0707 60%) f
 .card h2{margin:0 0 6px;font:700 20px/1.15 "MotoGP Display",Impact,sans-serif;text-transform:uppercase;letter-spacing:.5px}
 .card p{margin:0;color:#a99;font-size:14px}
 .foot{text-align:center;color:#7d6c6c;font-size:12px;margin-top:8px}
+#tabs{display:flex;gap:8px;margin:0 0 20px}#tabs button{flex:1;padding:12px 8px;background:#1a0e0e;color:#b9aaaa;border:1px solid #3a2222;border-radius:12px;font:700 14px "MotoGP Text",system-ui,sans-serif;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;transition:background .25s,color .25s,border-color .25s,transform .15s}#tabs button.on{background:#e10600;color:#fff;border-color:#e10600}#tabs button:active{transform:scale(.97)}
+.lst{animation:fin .3s ease both}@keyframes fin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 /* layar tool */
 #viewer{position:fixed;inset:0;display:none;flex-direction:column;background:#0b0b0d;z-index:10}
 #viewer.on{display:flex}
@@ -37,9 +39,10 @@ body{background:#0b0707 radial-gradient(ellipse at top,#3a0b0b 0%,#0b0707 60%) f
 </head>
 <body>
 <div id="hub">
-  <div class="logo"><b>F1C <i>TOOLS</i></b></div>
-  <p class="sub">Area pemilik. Pilih salah satu di bawah, semuanya dibuka di halaman ini.</p>
-  <div id="list"></div>
+  <div class="logo"><b>NARZGOD <i>TOOLS</i></b></div>
+  <p class="sub">Area pemilik. Pilih tab, lalu pilih alatnya. Semuanya dibuka di halaman ini.</p>
+  <div id="tabs"><button data-t="poster" class="on">F1C Poster Tools</button><button data-t="legends">Legends</button></div>
+  <div id="list-poster" class="lst"></div><div id="list-legends" class="lst" style="display:none"></div>
   <p class="foot">Hasil poster tersimpan di perangkatmu sendiri.</p>
   <p class="foot"><button id="lock" style="background:none;border:1px solid #3a2222;color:#b9aaaa;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer">Kunci &amp; keluar</button></p>
 </div>
@@ -51,23 +54,31 @@ body{background:#0b0707 radial-gradient(ellipse at top,#3a0b0b 0%,#0b0707 60%) f
 
 <script>
 const TOOLS=[
- {id:"race-result",  t:"Race Result",       d:"Poster hasil race: podium P1-P3 dan daftar P4-P10",           img:"/owner/assets/f1c.jpg",    src:"/owner/tools/race-result/index.html"},
- {id:"poster-studio",t:"Poster Studio",     d:"Studio poster lengkap: Winner, Pole, Fastest dan lainnya",     img:"/owner/assets/studio.jpg", src:"/owner/tools/poster-studio/index.html"},
- {id:"race-week",    t:"Race Week",         d:"Poster pengumuman Race Week dengan bendera dan nama GP",       img:"/owner/assets/race.jpg",   src:"/owner/tools/race-week/index.html"},
- {id:"driver-standings",t:"Driver Standings",d:"Klasemen pembalap dengan poin, naik-turun posisi, dan negara", img:"/owner/assets/drv.jpg",    src:"/owner/tools/driver-standings/index.html"},
- {id:"team-standings",t:"Team Standings",   d:"Klasemen tim konstruktor dengan warna dan logo tim",           img:"/owner/assets/team.jpg",   src:"/owner/tools/team-standings/index.html"},
- {id:"legends-manager",t:"fRacing Legends Manager",d:"Kelola event, balapan, hasil, tim, ban, dan lisensi driver", img:"", src:"/owner/manager.html"}
+ {g:"poster",id:"race-result",  t:"Race Result",       d:"Poster hasil race: podium P1-P3 dan daftar P4-P10",           img:"/owner/assets/f1c.jpg",    src:"/owner/tools/race-result/index.html"},
+ {g:"poster",id:"poster-studio",t:"Poster Studio",     d:"Studio poster lengkap: Winner, Pole, Fastest dan lainnya",     img:"/owner/assets/studio.jpg", src:"/owner/tools/poster-studio/index.html"},
+ {g:"poster",id:"pc-pole",      t:"Pole Position",     d:"Dua konsep: panel samping dan bingkai teks besar",            img:"/owner/assets/pc-pole.jpg",    src:"/owner/tools/poster-concepts/index.html?t=pole&pv=pc-pole"},
+ {g:"poster",id:"pc-fastest",   t:"Fastest Lap",       d:"Dua konsep: panel samping dan bingkai dengan dial",           img:"/owner/assets/pc-fastest.jpg", src:"/owner/tools/poster-concepts/index.html?t=fastest&pv=pc-fastest"},
+ {g:"poster",id:"pc-winner",    t:"Winner (Konsep Baru)",d:"Dua konsep: garis diagonal teks lebar dan teks outline",     img:"/owner/assets/pc-winner.jpg",  src:"/owner/tools/poster-concepts/index.html?t=winner&pv=pc-winner"},
+ {g:"poster",id:"pc-grid",      t:"Starting Grid",     d:"Dua konsep: panel gelap dan name plate putih dengan penalti", img:"/owner/assets/pc-grid.jpg",    src:"/owner/tools/poster-concepts/index.html?t=grid&pv=pc-grid"},
+ {g:"poster",id:"pc-lineup",    t:"Driver Line-Up",    d:"Susunan driver per tim lengkap dengan foto dan logo tim",     img:"/owner/assets/pc-lineup.jpg",  src:"/owner/tools/poster-concepts/index.html?t=lineup&pv=pc-lineup"},
+ {g:"poster",id:"race-week",    t:"Race Week",         d:"Poster pengumuman Race Week dengan bendera dan nama GP",       img:"/owner/assets/race.jpg",   src:"/owner/tools/race-week/index.html"},
+ {g:"poster",id:"driver-standings",t:"Driver Standings",d:"Klasemen pembalap dengan poin, naik-turun posisi, dan negara", img:"/owner/assets/drv.jpg",    src:"/owner/tools/driver-standings/index.html"},
+ {g:"poster",id:"team-standings",t:"Team Standings",   d:"Klasemen tim konstruktor dengan warna dan logo tim",           img:"/owner/assets/team.jpg",   src:"/owner/tools/team-standings/index.html"},
+ {g:"legends",id:"legends-manager",t:"fRacing Legends Manager",d:"Kelola event, balapan, hasil, tim, ban, dan lisensi driver", img:"", src:"/owner/manager.html"}
 ];
 const $=id=>document.getElementById(id);
-const list=$("list"),viewer=$("viewer"),slot=$("slot");
+const viewer=$("viewer"),slot=$("slot");
 TOOLS.forEach(x=>{
   const b=document.createElement("button");
   b.className="card";
   const im=x.img?'<div class="im" id="im-'+x.id+'" style="background-image:url('+x.img+')"></div>':'<div class="im ph">fRacing <span>LEGENDS</span></div>';
   b.innerHTML=im+'<div class="tx"><h2>'+x.t+'</h2><p>'+x.d+'</p></div>';
   b.onclick=()=>{history.pushState({tool:x.id},"","#"+x.id);open(x.id)};
-  list.appendChild(b);
+  $("list-"+x.g).appendChild(b);
 });
+function tab(t){document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));["poster","legends"].forEach(k=>{const l=$("list-"+k);l.style.display=k===t?"":"none";if(k===t){l.style.animation="none";void l.offsetWidth;l.style.animation=""}});try{localStorage.setItem("hub-tab",t)}catch(e){}}
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.t));
+let t0="poster";try{t0=localStorage.getItem("hub-tab")||"poster"}catch(e){}tab(t0==="legends"?"legends":"poster");
 function open(id){
   const x=TOOLS.find(t=>t.id===id); if(!x){close();return}
   $("ttl").textContent=x.t;
