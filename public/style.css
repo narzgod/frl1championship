@@ -208,3 +208,19 @@ html[data-theme=light] .sc.sv th,html[data-theme=light] .sc th{background:#e1060
 button.x.pri{background:var(--a);color:var(--ac);border-color:var(--a)}
 .fpv{margin-top:8px;padding:12px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--s2)}
 .fcr{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+
+/* engine and turbo upgrades */
+.ugt{margin:0 0 18px;padding:14px;border:1px solid var(--ln);border-radius:16px;background:var(--s1)}
+.ugh{display:flex;justify-content:space-between;align-items:baseline;gap:6px 12px;flex-wrap:wrap;margin-bottom:10px}.ugh b{font-size:calc(18px*var(--fsb,1))}
+.ugd{display:grid;grid-template-columns:1fr;gap:10px}
+.ugc{padding:12px;border-radius:12px;background:var(--s2);border:1px solid var(--ln)}
+.ugc .uh{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:6px}.ugc .uh b{font-size:calc(16px*var(--fsb,1))}.ugc .uh span{color:#f5c242;font-weight:800}
+.ucg{font-size:calc(11px*var(--fsb,1));letter-spacing:.12em;text-transform:uppercase;color:var(--m);font-weight:700;margin:12px 0 6px}
+.uc{display:grid;grid-template-columns:1fr auto;grid-template-areas:"n l" "b b";gap:3px 10px;margin-bottom:10px}.un{grid-area:n;font-weight:700}.ul{grid-area:l;color:#f5c242;font-weight:800;font-size:calc(13px*var(--fsb,1))}.ubx{grid-area:b;display:flex;gap:5px}
+.ub{display:block;width:26px;height:16px;border:2px solid #19d7c7;border-radius:3px}.ub.on{background:#19d7c7}.ub.pl{border-color:#f5c242;background:#f5c24259}
+.ugf{margin-top:12px;border-top:1px solid var(--ln);padding-top:10px}.ugf summary{cursor:pointer;font-weight:800;color:var(--a)}
+.ugf label.k{display:block;margin:10px 0 4px;font-size:calc(12px*var(--fsb,1));color:var(--m)}
+.ugf input,.ugf select,.ugf textarea{width:100%}
+.upk{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:6px;border:1px solid var(--ln);border-radius:10px;background:var(--s1)}.upk input{width:auto;flex:none}.upk em{color:#f5c242;font-style:normal;font-weight:700;margin-left:auto}.upk.dis{opacity:.45}
+.urp{margin:8px 0;padding:10px 12px;border:1px solid var(--ln);border-radius:10px;background:var(--s2);font-size:calc(13px*var(--fsb,1))}.urp b.st-p{color:#f5c242}.urp b.st-a{color:#18b26b}.urp b.st-r{color:#e5252a}
+#bar:has(a:nth-child(6)) a{font-size:9.5px;letter-spacing:.02em}

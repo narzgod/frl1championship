@@ -65,6 +65,15 @@ return hb+(T?`<div class=hsb>${bk?`<a class=bk href="${bk}">&larr;</a>`:''}<div 
 function toggleMenu(){const m=$('#mn'),b=$('#hmb');if(!m)return;const o=!m.classList.contains('open');m.classList.toggle('open',o);if(b)b.classList.toggle('open',o);document.body.style.overflow=o?'hidden':''}
 function mnAcc(b){const i=b.parentNode,o=i.classList.contains('open');[...i.parentNode.children].forEach(x=>x.classList.remove('open'));if(!o)i.classList.add('open')}
 const TIERC={rookie:'#8995A5',contender:'#46988A',premier:'#477EAD',elite:'#9474B8',masters:'#C49A4A',legends:'#B83A46'},tierCol=n=>TIERC[String(n||'').toLowerCase().replace(/\s*(tier|class)$/,'').trim()]||'';
+/* engine and turbo development system */
+const UP_ENG=['Engine','Camshaft','Transmission','ECU'],UP_TRB=['Pipe','Turbo','Intercooler','Air Filter'],UP_NM=k=>k=='e'?UP_ENG:UP_TRB;
+const upOn=e=>!!(e&&e.up&&e.up.on),upTypes=(e,k)=>((e&&e.up)||{})[k=='e'?'en':'tb']||[],upTy=(e,k,id)=>upTypes(e,k).find(x=>x.id==id);
+const upMax=(ty,i)=>{const m=+((((ty||{}).d||[])[i])||{}).m;return m>=1&&m<=8?m:5},upLv=(ty,i)=>Math.max(0,Math.min(upMax(ty,i),+((((ty||{}).d||[])[i])||{}).l||0));
+const upDef=(e,k,id)=>[0,1,2,3].map(i=>upLv(upTy(e,k,id),i));
+const upShares=(dids,m,f,total)=>{const o={};if(dids.length<2){dids.forEach(d=>o[d]=total);return o}if(m==='70'&&dids.includes(f)){const a=Math.round(total*.7);dids.forEach(d=>o[d]=d==f?a:total-a)}else{const h=Math.floor(total/2);o[dids[0]]=total-h;o[dids[1]]=h}return o};
+const upBoxes=(l,m,pl)=>Array.from({length:m},(_,i)=>`<i class="ub${i<l?' on':(i==l&&pl?' pl':'')}"></i>`).join('');
+const upComp=(name,l,m,pl)=>`<div class="uc${pl?' sel':''}"><div class=un>${esc(name)}</div><div class=ubx>${upBoxes(l,m,pl)}</div><div class=ul>${l<m?'Lv.'+l+'&gt;Lv.'+(l+1):'Lv.'+l+' MAX'}</div></div>`;
+const upRatioTxt=(t,nm)=>{const u=t.up||{};if(!u.lk)return'Split not locked yet';return u.m=='70'?'Split locked: 70:30, focus '+nm(u.f):'Split locked: 50:50'};
 const FONTS={disp:['MotoGP Display','"MotoGP Display",Impact,"Arial Black",sans-serif'],text:['MotoGP Text','"MotoGP Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif'],sans:['System sans-serif','system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif'],serif:['Serif','Georgia,"Times New Roman",serif'],mono:['Monospace','ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'],cond:['Condensed','"Arial Narrow","Roboto Condensed",Impact,sans-serif']};
 function fontStack(k,e){const p=e[k=='h'?'fh':'fb'],c=e[k=='h'?'fhc':'fbc'];if(p=='custom'&&c&&c.d)return '"EvF'+k+'",sans-serif';return FONTS[p]?FONTS[p][1]:''}
 function fontCss(e){if(!e)return'';let o='';['h','b'].forEach(k=>{const p=e[k=='h'?'fh':'fb'],c=e[k=='h'?'fhc':'fbc'];if(p=='custom'&&c&&c.d)o+='@font-face{font-family:"EvF'+k+'";src:url('+c.d+') format("'+(c.f||'truetype')+'");font-display:swap}'});const h=fontStack('h',e),b=e.fb=='same'?h:fontStack('b',e);let v='';if(+e.fsh&&+e.fsh!=100)v+='--fsh:'+(e.fsh/100)+';';if(+e.fsb&&+e.fsb!=100)v+='--fsb:'+(e.fsb/100)+';';if(h)v+='--f-title:'+h+';';if(b)v+='--f-ui:'+b+';--f-body:'+b+';';return o+(v?':root{'+v+'}':'')}

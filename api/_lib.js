@@ -22,5 +22,5 @@ async function body(req) {
 }
 const norm = s => { s = s && typeof s === 'object' ? s : {}; ['ev', 'dr', 'tm', 'rc'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; }); return s; };
 /* public view: no phone numbers */
-const strip = s => { const o = JSON.parse(JSON.stringify(norm(s))); o.dr.forEach(d => delete d.wa); o.tm.forEach(t => { delete t.tpw; delete t.oww; }); return o; };
+const strip = s => { const o = JSON.parse(JSON.stringify(norm(s))); o.dr.forEach(d => delete d.wa); o.tm.forEach(t => { delete t.tpw; delete t.oww; if (t.up) delete t.up.r; }); return o; };
 module.exports = { hasDb, getState, putState, authed, body, norm, strip };
