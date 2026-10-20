@@ -21,6 +21,10 @@ async function body(req) {
   const c = []; for await (const x of req) c.push(x); try { return JSON.parse(Buffer.concat(c).toString() || '{}'); } catch (e) { return {}; }
 }
 const norm = s => { s = s && typeof s === 'object' ? s : {}; ['ev', 'dr', 'tm', 'rc'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; }); return s; };
-/* public view: no phone numbers */
-const strip = s => { const o = JSON.parse(JSON.stringify(norm(s))); o.dr.forEach(d => delete d.wa); o.tm.forEach(t => { delete t.tpw; delete t.oww; }); return o; };
-module.exports = { hasDb, getState, putState, authed, body, norm, strip };
+/* team CP / tyres / sponsor slots / package are all derived from an append-only ledger, so purchases made by teams are never lost when the admin saves */
+const sum = t => { const u = (t && t.up) || {}, l = Array.isArray(u.led) ? u.led : [], o = { cp: 0, tires: 0, slots: 0, pk: '' };
+  l.forEach(x => { o.cp += +x.cp || 0; if (x.k === 'tire') o.tires += +x.q || 0; if (x.k === 'slot') o.slots += +x.q || 0; if (x.k === 'pack') o.pk = x.ref || ''; }); return o; };
+/* public view: no phone numbers, no team passwords, no ledger details */
+const strip = s => { const o = JSON.parse(JSON.stringify(norm(s))); o.dr.forEach(d => delete d.wa);
+  o.tm.forEach(t => { delete t.tpw; delete t.oww; if (t.up) { t.up.sum = sum(t); delete t.up.r; delete t.up.pw; delete t.up.led; } }); return o; };
+module.exports = { hasDb, getState, putState, authed, body, norm, strip, sum, cmd, eq };

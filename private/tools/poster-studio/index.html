@@ -263,6 +263,19 @@ const FST={};
 const loadF=(v,url)=>new FontFace(v,url).load().then(f=>{document.fonts.add(f);FST[v]=1}).catch(()=>{FST[v]=0});
 const fontsReady=Promise.all(BUILTIN.map(([v,l,b])=>loadF(v,`url(data:font/ttf;base64,${b})`)));
 const userFont=f=>loadF(f.v,`url(${f.d})`).then(draw);
+/* upload your own font: checked first, added to the list only if the browser can really use it, then used for the poster text */
+let FMSG='';
+const b64=buf=>{let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)};
+const fontOk=buf=>{const u=new Uint8Array(buf.slice(0,4)),t=String.fromCharCode(u[0],u[1],u[2],u[3]);return(u[0]==0&&u[1]==1&&u[2]==0&&u[3]==0)||t=='OTTO'||t=='true'||t=='wOFF'||t=='wOF2'};
+function addFont(f){const nm=f.name.replace(/\.\w+$/,''),r=new FileReader();
+ r.onerror=()=>{FMSG='File font tidak bisa dibaca.';ui()};
+ r.onload=()=>{if(!fontOk(r.result)){FMSG='Bukan file font yang didukung. Pilih file .ttf, .otf, .woff atau .woff2.';ui();return}
+  const o={v:'U'+uid(),l:nm,d:'data:font/ttf;base64,'+b64(r.result)};
+  new FontFace(o.v,`url(${o.d})`).load().then(ff=>{document.fonts.add(ff);FST[o.v]=1;S.fonts.push(o);const X=Q();
+   if(S.tpl=='pole'){['head','name','sub'].forEach(k=>{const z=X.pt[k];if(z&&z.f!==undefined){z.f=o.v;if(z.f2!==undefined)z.f2=o.v}})}else{X.txt.nf=o.v;X.txt.hf=o.v;X.txt.sf=o.v}
+   FMSG='Font "'+nm+'" ditambahkan dan dipakai di teks poster. Kamu bisa menggantinya per bagian di pilihan font.';save();draw();ui()})
+  .catch(()=>{FMSG='Font ini tidak bisa dipakai oleh browser. Coba file font lain.';ui()})};
+ r.readAsArrayBuffer(f)}
 const FL=()=>[...BUILTIN.map(b=>[b[0],b[1]]),['Impact','Impact'],['Arial Black','Arial Black'],['Georgia','Georgia'],['Courier New','Courier New'],...S.fonts.map(f=>[f.v,f.l])];
 function pic(file,max,cb){const u=URL.createObjectURL(file),i=new Image();i.onload=()=>{const r=Math.min(1,max/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*r);c.height=Math.round(i.height*r);c.getContext('2d').drawImage(i,0,0,c.width,c.height);cb(c.toDataURL('image/png'),c.width,c.height);URL.revokeObjectURL(u)};i.src=u}
 // ---- antarmuka ----
@@ -282,7 +295,7 @@ function ui(){
  const colOpts=[...t.colors.map((c,i)=>[i,`Warna tim ${i+1} (${c})`]),[4,'Putih'],[5,'Hitam'],[6,'Warna sendiri (kode hex)']];
  const fsel=(k,lab)=>`<label>${lab}</label><select data-b="txt.${k}">${opts(fo,Z.txt[k])}</select>`;
  const bad=BUILTIN.filter(b=>FST[b[0]]===0).map(b=>b[1]);
- const fontNote=`<small>${bad.length?'Font gagal dimuat: '+esc(bad.join(', ')):'Font MotoGP sudah termuat.'}</small>`;
+ const badU=S.fonts.filter(f=>FST[f.v]===0).map(f=>f.l),fontNote=`<small>${FMSG?esc(FMSG):(bad.length||badU.length)?'Font gagal dimuat: '+esc(bad.concat(badU).join(', ')):'Font MotoGP sudah termuat.'}</small>`;
  const tplCard=`<div class="card"><h3>Jenis poster</h3><div class="row">${[['winner','WINNER'],['pole','POLE']].map(([v,n])=>`<button class="btn ${S.tpl==v?'sel':''}" style="flex:1" data-act="settpl" data-v="${v}">${n}</button>`).join('')}</div><small>Driver, tim, dan font dipakai bersama. Grafik, teks, dan logo diatur terpisah untuk tiap jenis.</small></div>`;
  const bgCard=`<div class="card"><h3>Warna dasar poster</h3>
  <label>Sumber warna</label><select data-b="bg.mode" data-r="1">${opts([['auto','Otomatis dari warna utama tim driver'],['flat','Satu warna tim polos'],['team','Warna tim 1 → warna tim 2'],['custom','Warna sendiri']],bg.mode)}</select>${bg.mode=='auto'?'<small>Warna latar mengikuti tim driver yang tampil di poster.</small>':''}
@@ -315,7 +328,7 @@ const dpad=k=>`<div class="dp"><span></span><button data-dp="${k}" data-dx="0" d
  ${sl('Ukuran teks bawah','sz',12,140)}${sl('Jarak huruf teks bawah','ssp',-5,60)}
  ${sl('Jarak antar baris','gap',0,160)}</div>
  <div class="card"><h3>Font</h3>${fsel('nf','Font nama')}${fsel('hf','Font judul')}${fsel('sf','Font teks bawah')}
- <label>Tambah font sendiri (.ttf atau .otf)</label><input type="file" accept=".ttf,.otf,.woff,.woff2" data-act="font">${fontNote}</div>
+ <label>Tambah font sendiri (.ttf atau .otf)</label><input type="file" data-act="font">${fontNote}</div>
  <div class="card"><h3>Warna teks</h3>
  <label>Nama</label>${cf('data-b="txt.nc"',x.nc)}<label>Judul besar</label>${cf('data-b="txt.hc"',x.hc)}<label>Teks bawah</label>${cf('data-b="txt.sc"',x.sc)}</div>
  <div class="card"><h3>Bayangan teks</h3>${shUI('txt.sh',x.sh)}</div>`};
@@ -336,7 +349,7 @@ const dpad=k=>`<div class="dp"><span></span><button data-dp="${k}" data-dx="0" d
   <label>Unggah bendera sendiri (gambar apa saja)</label><input type="file" accept="image/*" data-act="flagup">
   ${rng('Ukuran bendera','data-b="flag.fz"',f.fz,40,250)}${rng('Tebal garis putih','data-b="flag.ow"',f.ow,0,300)}</div>`};
  const textP=()=>pit('head','Judul besar',false)+pit('name','Nama driver',true)+pit('info','Info ronde',true)+flagCard()+
-  `<div class="card"><h3>Font tambahan</h3><label>Tambah font sendiri (.ttf atau .otf)</label><input type="file" accept=".ttf,.otf,.woff,.woff2" data-act="font">${fontNote}<small>Font baru langsung bisa dipilih di setiap kartu di atas.</small></div>`;
+  `<div class="card"><h3>Font tambahan</h3><label>Tambah font sendiri (.ttf atau .otf)</label><input type="file" data-act="font">${fontNote}<small>Font baru langsung bisa dipilih di setiap kartu di atas.</small></div>`;
  const pT=pole?textP():textW();
  const presetCard=`<div class="card"><h3>Gaya latar siap pakai</h3><small>Mengganti grafik latar saja. Garis putih tidak ikut berubah.</small>
  <label>Warna dasar</label><select data-pc="1"><option value="team" ${presetCol=='team'?'selected':''}>Ikut warna tim driver</option><option value="ref" ${presetCol=='ref'?'selected':''}>Seperti referensi (abu-abu / oranye)</option></select>
@@ -405,7 +418,7 @@ document.addEventListener('change',e=>{
  else if(f&&a=='flagup')pic(f,500,u=>{Q().flag.src=u;Q().flag.mode='custom';save();ui()});
  else if(f&&a=='logo')pic(f,600,u=>{S.teams.find(d=>d.id==el.dataset.id).logo=u;save();ui()});
  else if(f&&a=='newlogo')pic(f,900,(u,w,h)=>{const l={id:uid(),src:u,ar:h/w,x:W/2,y:200,w:240,o:1};snap(l,'tc');Q().logos.push(l);selLogo=l.id;save();ui()});
- else if(f&&a=='font'){const r=new FileReader();r.onload=()=>{const o={v:'U'+uid(),l:f.name.replace(/\.\w+$/,''),d:r.result};S.fonts.push(o);userFont(o).then(()=>{if(S.tpl=='pole')Q().pt.head.f=o.v;else Q().txt.hf=o.v;save();ui()})};r.readAsDataURL(f)}
+ else if(f&&a=='font'){addFont(f);el.value=''}
  else onVal(e)});
 const fixSel=()=>{if(selLogo!='team'&&!Q().logos.find(l=>l.id==selLogo))selLogo='team'};
 document.addEventListener('click',e=>{

@@ -46,7 +46,7 @@ const tbl=(h,rows,fit,vis)=>`<div class="sc${vis&&rows.length>vis?' sv':''}"${fi
 const hx=v=>{v=(v||'').trim().replace(/^#/,'');if(/^[0-9a-f]{3}$/i.test(v))v=v.split('').map(c=>c+c).join('');return /^[0-9a-f]{6}$/i.test(v)?'#'+v.toLowerCase():''};
 const colorField=(id,label,val)=>`<label>${label}</label><div class=cp><input id=${id} type=color value="${val}" oninput="$('#${id}_h').value=this.value"><input id=${id}_h value="${val}" placeholder="#E10600" maxlength=7 oninput="const c=hx(this.value);if(c)$('#${id}').value=c"></div>`;
 const colorVal=id=>hx(($('#'+id+'_h')||{value:''}).value);
-const normWA=v=>{let s=(v||'').trim();const pl=s.startsWith('+');s=s.replace(/\D/g,'');if(!s)return'';if(pl)s='+'+s;else if(s.startsWith('00'))s='+'+s.slice(2);else if(s.startsWith('0'))s='+62'+s.slice(1);else if(s.startsWith('62'))s='+'+s;else s='+62'+s;const n=s.replace(/\D/g,'').length;return n>=8&&n<=15?s:''};
+const normWA=v=>{let s=(v||'').trim();const pl=s.startsWith('+');s=s.replace(/\D/g,'');if(!s)return'';if(pl)s='+'+s;else if(s.startsWith('00'))s='+'+s.slice(2);else if(s.startsWith('0'))s='+62'+s.slice(1);else if(s.startsWith('62'))s='+'+s;else if(s[0]=='8')s='+62'+s;else s='+'+s;const n=s.replace(/\D/g,'').length;return n>=8&&n<=15?s:''};
 const waLink=n=>n?`<a href="https://wa.me/${n.replace(/\D/g,'')}" target=_blank rel=noopener style="text-decoration:underline">${esc(n)}</a>`:'-';
 const sUrl=u=>{u=String(u||'').trim();return /^https?:\/\//i.test(u)?u:(/^[a-z][a-z0-9+.-]*:/i.test(u)?'#':'https://'+u)};
 const szv=(z,k,d)=>{const v=+(z||{})[k];return v>=20&&v<=120?v:d};
@@ -65,6 +65,24 @@ return hb+(T?`<div class=hsb>${bk?`<a class=bk href="${bk}">&larr;</a>`:''}<div 
 function toggleMenu(){const m=$('#mn'),b=$('#hmb');if(!m)return;const o=!m.classList.contains('open');m.classList.toggle('open',o);if(b)b.classList.toggle('open',o);document.body.style.overflow=o?'hidden':''}
 function mnAcc(b){const i=b.parentNode,o=i.classList.contains('open');[...i.parentNode.children].forEach(x=>x.classList.remove('open'));if(!o)i.classList.add('open')}
 const TIERC={rookie:'#8995A5',contender:'#46988A',premier:'#477EAD',elite:'#9474B8',masters:'#C49A4A',legends:'#B83A46'},tierCol=n=>TIERC[String(n||'').toLowerCase().replace(/\s*(tier|class)$/,'').trim()]||'';
+/* upgrade system v2: one engine set (engine + turbo) per team, a team CP wallet, sponsors and HP packages */
+const UP_ENG=['Piston','ECU','Transmission','Camshaft'],UP_TRB=['Turbo','Intercooler','Air Filter','Pipe'],UP_NM=k=>k=='e'?UP_ENG:UP_TRB;
+const UP_BASE=[250,300,450,700,900],UP_MUL=[1.5,1.25,1,.8],UP_KD=k=>k=='e'?'d':'td';
+const upOn=e=>!!(e&&e.up&&e.up.on),upSets=e=>((e&&e.up)||{}).en||[],upSet=(e,id)=>upSets(e).find(x=>x.id==id);
+const upMax=(set,k,i)=>{const m=+((((set||{})[UP_KD(k)]||[])[i])||{}).m;return m>=1&&m<=8?m:5};
+const upLv=(set,k,i)=>Math.max(0,Math.min(upMax(set,k,i),+((((set||{})[UP_KD(k)]||[])[i])||{}).l||0));
+const upDef=(set,k)=>[0,1,2,3].map(i=>upLv(set,k,i));
+/* price to reach level lv (1-based) of a component: Piston > ECU > Transmission > Camshaft, Turbo > Intercooler > Air Filter > Pipe; the admin can overwrite every price */
+const upCost=(e,k,i,lv)=>{const x=Math.min(Math.max(lv,1),5)-1,row=((((e.up||{}).cc||{})[k])||[])[i],v=row&&row.length?+row[x]:NaN;return v>=0?v:Math.round(UP_BASE[x]*UP_MUL[i]/10)*10};
+const upTbl=(e,k)=>[0,1,2,3].map(i=>[1,2,3,4,5].map(l=>upCost(e,k,i,l)));
+const cpF=n=>(Math.round(+n||0)).toLocaleString('en-US');
+/* team wallet: admin sees the full ledger; visitors get a summary computed by the server */
+const upW=t=>{const u=(t&&t.up)||{};if(!Array.isArray(u.led))return Object.assign({cp:0,tires:0,slots:0,pk:''},u.sum||{});const o={cp:0,tires:0,slots:0,pk:''};u.led.forEach(x=>{o.cp+=+x.cp||0;if(x.k=='tire')o.tires+=+x.q||0;if(x.k=='slot')o.slots+=+x.q||0;if(x.k=='pack')o.pk=x.ref||''});return o};
+const upBoxes=(l,m,pl)=>Array.from({length:m},(_,i)=>`<i class="ub${i<l?' on':(i==l&&pl?' pl':'')}"></i>`).join('');
+const upComp=(name,l,m,pl,cost)=>`<div class="uc${pl?' sel':''}"><div class=un>${esc(name)}</div><div class=ubx>${upBoxes(l,m,pl)}</div><div class=ul>${l<m?'Lv.'+l+'&gt;Lv.'+(l+1)+(cost!=null?' &middot; '+cpF(cost)+' CP':''):'Lv.'+l+' MAX'}</div></div>`;
+const SP_DEF=[{n:'Oracle',k:'m',pn:'season',first:5000,per:20000,pen:40000,wcc:1,wdc:2},{n:'Petronas',k:'m',pn:'season',first:4000,per:15000,pen:30000,wcc:2,wdc:3},{n:'Mobil 1',k:'s',pn:'race',first:250,per:150,q:2,r:2,mode:'all'},{n:'Motul',k:'s',pn:'race',first:0,per:200,q:3,r:5,mode:'all'}];
+const PK_DEF=[{hp:400,cp:4500},{hp:450,cp:5000}];
+const spLine=x=>{const o=[];if(x.wcc)o.push(x.wcc==1?'WCC win':'WCC top '+x.wcc);if(x.wdc)o.push('WDC top '+x.wdc);if(x.q)o.push('Qualifying top '+x.q);if(x.r)o.push('Race finish top '+x.r);return o.join(' · ')+((x.q&&x.r)?(x.mode=='any'?' (either one)':' (both)'):'')};
 const FONTS={disp:['MotoGP Display','"MotoGP Display",Impact,"Arial Black",sans-serif'],text:['MotoGP Text','"MotoGP Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif'],sans:['System sans-serif','system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif'],serif:['Serif','Georgia,"Times New Roman",serif'],mono:['Monospace','ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'],cond:['Condensed','"Arial Narrow","Roboto Condensed",Impact,sans-serif']};
 function fontStack(k,e){const p=e[k=='h'?'fh':'fb'],c=e[k=='h'?'fhc':'fbc'];if(p=='custom'&&c&&c.d)return '"EvF'+k+'",sans-serif';return FONTS[p]?FONTS[p][1]:''}
 function fontCss(e){if(!e)return'';let o='';['h','b'].forEach(k=>{const p=e[k=='h'?'fh':'fb'],c=e[k=='h'?'fhc':'fbc'];if(p=='custom'&&c&&c.d)o+='@font-face{font-family:"EvF'+k+'";src:url('+c.d+') format("'+(c.f||'truetype')+'");font-display:swap}'});const h=fontStack('h',e),b=e.fb=='same'?h:fontStack('b',e);let v='';if(+e.fsh&&+e.fsh!=100)v+='--fsh:'+(e.fsh/100)+';';if(+e.fsb&&+e.fsb!=100)v+='--fsb:'+(e.fsb/100)+';';if(h)v+='--f-title:'+h+';';if(b)v+='--f-ui:'+b+';--f-body:'+b+';';return o+(v?':root{'+v+'}':'')}
@@ -77,8 +95,17 @@ function fitTables(){document.querySelectorAll('.sc[data-fit]').forEach(sc=>{con
 const vis=parseInt(sc.dataset.vis)||0;sc.style.maxHeight='';if(vis&&t.rows.length>vis+1){const st=sc.scrollTop;sc.scrollTop=0;const nx=t.rows[vis+1];sc.style.maxHeight=Math.ceil(nx.getBoundingClientRect().top-sc.getBoundingClientRect().top)+'px';sc.scrollTop=st}})}
 addEventListener('resize',fitTables);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitTables);
 /* tyre colours: Soft red, Medium yellow, Hard white, Inter green, Wet blue */
-const TYC={Soft:'#e10600',Medium:'#ffd100',Hard:'#f2f2f2',Inter:'#1fb84a',Wet:'#1f78ff'};
-const tyDot=(t,sz)=>{if(!t)return'';sz=sz||22;return`<span class=td style="--tc:${TYC[t]||'#888'};width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.56)}px;color:${t=='Hard'?'#111':'#fff'}">${esc(t[0])}</span>`};
+const TYC0={'Super Soft':'#d4249a',Soft:'#e10600',Medium:'#ffd100',Hard:'#f2f2f2',Inter:'#1fb84a',Wet:'#1f78ff'},TYC=Object.assign({},TYC0);
+const TY_PRE=['Super Soft','Soft','Medium','Hard','Inter','Wet'],TC_DEF=['Soft','Medium','Hard'],TY_AUTO=['#ff7a1a','#a05cff','#00c2c7','#ff4fa3','#8bc34a','#ffb300'];
+/* tyre compounds are chosen per event: e.tc = active compounds (default Soft/Medium/Hard), e.tcu = custom compounds [{n,c}] */
+const tcOf=e=>{const a=e&&Array.isArray(e.tc)&&e.tc.length?e.tc:TC_DEF;return a};
+const tyId=c=>String(c).replace(/[^A-Za-z0-9]/g,'_');
+const tyAuto=n=>{let h=0;for(const ch of String(n))h=(h*31+ch.charCodeAt(0))>>>0;return TY_AUTO[h%TY_AUTO.length]};
+const tyLum=c=>{const m=/^#?([0-9a-f]{6})$/i.exec(c||'');if(!m)return 0;const n=parseInt(m[1],16);return(.299*(n>>16)+.587*((n>>8)&255)+.114*(n&255))/255};
+const tyAbbr=t=>{const w=String(t).trim().split(/\s+/);return(w.length>1?w.map(x=>x[0]).join('').slice(0,2):String(t)[0]||'?').toUpperCase()};
+/* call whenever an event is shown, so custom compound colours of that event are known */
+function tyReg(e){Object.keys(TYC).forEach(k=>{if(!(k in TYC0))delete TYC[k]});Object.assign(TYC,TYC0);((e&&e.tcu)||[]).forEach(x=>{if(x&&x.n)TYC[x.n]=/^#[0-9a-f]{6}$/i.test(x.c||'')?x.c:tyAuto(x.n)})}
+const tyDot=(t,sz)=>{if(!t)return'';sz=sz||22;return`<span class=td style="--tc:${TYC[t]||'#888'};width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.56)}px;color:${t=='Hard'||(!(t in TYC0)&&tyLum(TYC[t])>.65)?'#111':'#fff'}">${esc(tyAbbr(t))}</span>`};
 const tyLogo=(t,sz)=>{sz=sz||16;const c=TYC[t]||'#888';return`<svg class=tl width="${sz}" height="${sz}" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#0e0f14" stroke="#3a3f4f" stroke-width="1"/><circle cx="12" cy="12" r="7.6" fill="none" stroke="${c}" stroke-width="3.4"/><circle cx="12" cy="12" r="3.6" fill="#2b2e3a"/></svg>`};
 const tyFull=t=>`<span class=tf>${tyLogo(t)}${esc(t)}</span>`;
 /* in-page tab links replace history so Back never "undoes" a tab tap */
@@ -152,23 +179,22 @@ if(!admin&&!old&&SYNC=='cloud')return sendReg('team',o).then(async m=>{await loa
 if(old)Object.assign(old,o);else S.tm.push(o);save();return true}
 
 /* tyre stock: 1 tyre per calendar race, set separately for Qualifying (q) and Race (r) */
-const TC=['Soft','Medium','Hard'];
 const calN=e=>+e.cal||10;
-const defAl=n=>{const h=Math.floor(n/3);return{Soft:n-2*h,Medium:h,Hard:h}};
-const alloc=e=>({q:e.tq||defAl(calN(e)),r:e.tr||defAl(calN(e))});
+const defAl=(n,cs)=>{cs=cs&&cs.length?cs:TC_DEF;const dry=cs.filter(c=>c!='Inter'&&c!='Wet'),use=dry.length?dry:cs,h=Math.floor(n/use.length),o={};cs.forEach(c=>o[c]=0);use.forEach((c,i)=>o[c]=i?h:n-(use.length-1)*h);return o};
+const alloc=e=>({q:e.tq||defAl(calN(e),tcOf(e)),r:e.tr||defAl(calN(e),tcOf(e))});
 const extra=(e,d,k,c)=>((((e.ty||{})[d]||{})[k]||{})[c])||0;
 const tyHid=(e,d)=>!!((e.th||{})[d]);
 const tyLim=(e,k,c)=>alloc(e)[k][c]||0;
 const tyTot=(e,d,k,c)=>tyLim(e,k,c)+extra(e,d,k,c);
 const qMode=(e,r)=>r.qm||e.qm||'one';
-function tyUsed(e,d){const u={q:{Soft:0,Medium:0,Hard:0},r:{Soft:0,Medium:0,Hard:0}};
+function tyUsed(e,d){const u={q:{},r:{}};tcOf(e).forEach(c=>{u.q[c]=0;u.r[c]=0});
 S.rc.filter(r=>r.ev==e.id).forEach(r=>{const f=r.fe.find(x=>x.did==d);if(f&&f.tyre in u.r)u.r[f.tyre]++;
 const ts=r.q.map(s=>s.find(x=>x.did==d)).filter(Boolean).map(x=>x.tyre).filter(t=>t in u.q);
 if(qMode(e,r)=='each')ts.forEach(t=>u.q[t]++);else if(ts.length)u.q[ts[ts.length-1]]++});return u}
 const RSL=4,rsSlot=(e,x,r,s)=>{const tid=x.rt||tmR(e,x.did,r,s).id||'',t=evT(e).find(z=>z.id==tid)||{},d=t.d||[],n=+x.rn||(d[2]==x.did?1:d[3]==x.did?2:0);return tid+'|'+(n||'u'+x.did)},
 rsKeys=(e,r,skip)=>{const k=new Set();['sp','fe'].forEach(s=>{if(skip&&skip==s)return;(r[s]||[]).forEach(x=>{if(x.rs&&x.did)k.add(rsSlot(e,x,r,s))})});return k},
 rsCount=(e,skipRid)=>{const c={};S.rc.filter(r=>r.ev==e.id&&r.id!=skipRid).forEach(r=>rsKeys(e,r).forEach(k=>c[k]=(c[k]||0)+1));return c};
-function tyCheck(e,dids,k){for(const d of dids){const u=tyUsed(e,d);for(const c of TC)if(u[k][c]>tyTot(e,d,k,c))return dn(d)+' has no '+c+' tyres left for '+(k=='q'?'Qualifying':'Race')+'. Add supply in the Tyres tab.'}return''}
+function tyCheck(e,dids,k){for(const d of dids){const u=tyUsed(e,d);for(const c of tcOf(e))if(u[k][c]>tyTot(e,d,k,c))return dn(d)+' has no '+c+' tyres left for '+(k=='q'?'Qualifying':'Race')+'. Add supply in the Tyres tab.'}return''}
 
 /* FLIP move animation, driven frame by frame: items slide from the old spot to the new one,
    the moved item is lifted and highlighted, and the screen follows the moved item.

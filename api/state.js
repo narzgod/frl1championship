@@ -17,6 +17,17 @@ module.exports = async (req, res) => {
       [['dr', x => x.did], ['tm', x => x.id]].forEach(([k, key]) => cur[k].forEach(x => {
         if ((x.at || 0) > base && !c[k].some(y => key(y) == key(x))) { c[k].push(x); merged++; }
       }));
+      /* keep upgrade reports and ledger entries (purchases) that teams made after the admin last loaded the data */
+      cur.tm.forEach(ct => {
+        const ot = c.tm.find(x => x.id == ct.id);
+        if (!ot || !ct.up) return;
+        ot.up = ot.up || {};
+        [['r', 'at'], ['led', 'at']].forEach(([k]) => {
+          if (!Array.isArray(ct.up[k])) return;
+          const have = new Set((ot.up[k] || []).map(r => r.id));
+          ct.up[k].forEach(r => { if ((r.at || 0) > base && !have.has(r.id)) { (ot.up[k] = ot.up[k] || []).push(r); merged++; } });
+        });
+      });
       await L.putState(c);
       return res.status(200).json({ s: c, ts: Date.now(), merged });
     }
