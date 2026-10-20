@@ -1,8 +1,26 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#0c0d12"><script>try{if(localStorage.getItem("frl-theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script><link rel="stylesheet" href="style.css?v=20261023"><title>fRacing Legends</title></head><body>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#0c0d12"><script>
+(function(){
+  function show(prefix,msg,extra){
+    var b=document.createElement('div');
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#b00020;color:#fff;padding:14px;font:12px/1.5 monospace;white-space:pre-wrap;max-height:60vh;overflow:auto;box-shadow:0 2px 10px rgba(0,0,0,.5)';
+    b.textContent=prefix+': '+msg+(extra?'\n'+extra:'');
+    (document.body||document.documentElement).appendChild(b);
+  }
+  window.addEventListener('error',function(e){
+    show('JS ERROR',e.message||String(e.error),(e.filename?e.filename+':'+e.lineno+':'+e.colno:'')+((e.error&&e.error.stack)?'\n'+e.error.stack:''));
+  });
+  window.addEventListener('unhandledrejection',function(e){
+    var r=e.reason;
+    show('PROMISE ERROR',(r&&r.message)||String(r),(r&&r.stack)||'');
+  });
+})();
+</script>
+<script>try{if(localStorage.getItem("frl-theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script><link rel="stylesheet" href="style.css?v=20261024"><title>fRacing Legends</title></head><body>
 <div id="top"><div class="tb" id="tb"></div></div><div class="w"><div id="msg"></div><div id="app"></div></div><div id="bar"></div>
 <script src="core.js"></script>
 <script src="flags.js"></script>
 <script src="export.js"></script>
+<script src="up.js"></script>
 <script>
 const dc=e=>e.col||'#e10600',stripe=(c,c2)=>`--a:${c};--c2:${c2||c};--stripe:linear-gradient(${c},${c2||c})`;
 const tierLbl=k=>k=='all'?'All':k.charAt(0).toUpperCase()+k.slice(1);
@@ -54,9 +72,9 @@ return`<div class=hero><small>Team slots</small><b style="${ts.length>=e.quota?'
 (ts.length?'<div class=sec>Entry list</div>':'<p class=m>No teams registered yet.</p>')+ts.map(t=>`<div class=cd style="${stripe(t.col||'#8b93a7',t.col2)}"><div class=rw><div class=nm style="color:${txT(t)}">${esc(t.name)}<small>${e.soc&&t.soc?esc(t.soc)+' · ':''}Team Principal ${esc(t.tp)} · Team Owner ${esc(t.ow)}</small></div></div><div class=tp>${t.d.map((d,i)=>d?`<span class=m>${['D1','D2','R1','R2'][i]}</span><span>${(t.num||{})[d]?'#'+t.num[d]+' ':''}${esc(dn(d))}${i>1?` <span class=m style="${(rc[t.id+'|'+(i-1)]||0)>=RSL?'color:#e5252a;font-weight:800':''}">&middot; reserve left ${Math.max(0,RSL-(rc[t.id+'|'+(i-1)]||0))}/${RSL}</span>`:''}</span>`:'').join('')}</div></div>`).join('')}
 function pTyres(e){const all=evD(e),ds=all.filter(d=>!tyHid(e,d));if(!all.length)return'<p class=m>No drivers yet.</p>';if(!ds.length)return'<p class=m>All drivers are hidden from this list.</p>';
 const qt=e.qm=='each'?'Qualifying counts every session.':'Qualifying counts once per race.';
-EXP={title:e.name,sub:'Tyre Stock',note:[['q','Qualifying'],['r','Race']].map(([k,n])=>['Total stock - '+n,TC.map(c=>c+' '+tyLim(e,k,c)).join(' \u00b7 ')])};
-const th2=TC.map((c,i)=>`<th class="tg2${i==0?' tgl':''}">${tyFull(c)}</th>`).join('');
-return`<p class=m>Tyres left per driver. ${calN(e)} races in the calendar, 1 tyre per race. ${qt}</p>`+`<div class=sc data-fit=".3"><table class=tt><tr><th rowspan=2>Driver List</th><th colspan=3 class=tgl>Qualifying</th><th colspan=3 class=tgl>Race</th></tr><tr>${th2}${th2}</tr>`+ds.map(d=>{const u=tyUsed(e,d);return`<tr><td>${nameTag(dn(d),tc(e,d),tmO(e,d).col2)}</td>`+['q','r'].flatMap(k=>TC.map((c,i)=>{const t=tyLim(e,k,c),l=tyTot(e,d,k,c)-u[k][c];return`<td class="tg2${i==0?' tgl':''}"><span style="${l<=0?'color:#e5252a;font-weight:800':''}">${l}<span class=m>/${t}</span></span></td>`})).join('')+'</tr>'}).join('')+'</table></div>'+expBtn()}
+EXP={title:e.name,sub:'Tyre Stock',note:[['q','Qualifying'],['r','Race']].map(([k,n])=>['Total stock - '+n,tcOf(e).map(c=>c+' '+tyLim(e,k,c)).join(' \u00b7 ')])};
+const TCe=tcOf(e),th2=TCe.map((c,i)=>`<th class="tg2${i==0?' tgl':''}">${tyFull(c)}</th>`).join('');
+return`<p class=m>Tyres left per driver. ${calN(e)} races in the calendar, 1 tyre per race. ${qt}</p>`+`<div class=sc data-fit=".3"><table class=tt><tr><th rowspan=2>Driver List</th><th colspan=${TCe.length} class=tgl>Qualifying</th><th colspan=${TCe.length} class=tgl>Race</th></tr><tr>${th2}${th2}</tr>`+ds.map(d=>{const u=tyUsed(e,d);return`<tr><td>${nameTag(dn(d),tc(e,d),tmO(e,d).col2)}</td>`+['q','r'].flatMap(k=>TCe.map((c,i)=>{const t=tyLim(e,k,c),l=tyTot(e,d,k,c)-u[k][c];return`<td class="tg2${i==0?' tgl':''}"><span style="${l<=0?'color:#e5252a;font-weight:800':''}">${l}<span class=m>/${t}</span></span></td>`})).join('')+'</tr>'}).join('')+'</table></div>'+expBtn()}
 function pReserves(e){const ts=evT(e);if(!ts.length)return'<p class=m>No teams registered yet.</p>';const rc=rsCount(e),L=(t,n)=>Math.max(0,RSL-(rc[t.id+'|'+n]||0)),
 cell=(t,n)=>{const u=rc[t.id+'|'+n]||0;if(!t.d[n+1]&&!u)return'<td class="tg2 tgl"><span class=m>-</span></td>';return`<td class="tg2 tgl"><span style="${L(t,n)<=0?'color:#e5252a;font-weight:800':''}">${L(t,n)}<span class=m>/${RSL}</span></span></td>`},
 un=Object.keys(rc).filter(k=>k.indexOf('|u')>0).map(k=>{const t=ts.find(z=>z.id==k.slice(0,k.indexOf('|')))||{};return dn(k.slice(k.indexOf('|u')+2))+' ('+(t.name||'?')+')'});
@@ -88,44 +106,10 @@ return`<p class=m>The fRacing Legends Category Series employs a six-tier classif
 +sec(5,'Participation &amp; Inactivity',P(['Participants who become inactive during a tier promotion period may be subject to disciplinary measures determined by the organizer. Depending on the circumstances, these measures may also affect their respective teams.','All participants are expected to maintain appropriate activity levels and fulfill their competition commitments throughout the season.']))
 +sec(6,'BETA Category Regulations',P(['Categories marked with the [BETA] label are open to all participants, regardless of their current tier.',"Participation in BETA categories does not affect an individual's tier classification and does not contribute toward Tier Level-Up Points.",'Championship results achieved in BETA categories remain unofficial until the respective category enters an officially recognized season. Titles and championship records will only be recognized as official once the category commences its official season.']))
 +sec(7,'Final Provisions',P(['All participants and teams must comply with the classification system and the sporting regulations applicable to each category.','The organizer reserves the right to review, amend, or introduce additional regulations when necessary to preserve competitive integrity, fair participation, and the long-term development of the fRacing Legends Category Series.']))}
-const upDn=d=>(S.dr.find(x=>x.did==d)||{}).name||d;
-const upSplit=r=>r.m=='70'?'70:30, focus '+upDn(r.f):'50:50';
-function upSum(t,r){return t.d.slice(0,2).filter(Boolean).map(d=>{const it=(r.items||{})[d]||{},o=[];['e','t'].forEach(k=>UP_NM(k).forEach((nm,i)=>{if((it[k]||[])[i])o.push((k=='e'?'Engine ':'Turbo ')+nm)}));return esc(upDn(d))+': '+(o.length?o.join(', '):'-')}).join('<br>')}
-function upCard(e,t,d){const u=((t.up||{}).d||{})[d],hd=`<div class=uh><b>${esc(upDn(d))}</b><span>${u?(+u.cp||0)+' CP':''}</span></div>`;
- if(!u)return`<div class=ugc>${hd}<p class=m>Upgrades are not set up yet.</p></div>`;
- const grp=k=>{const ty=upTy(e,k,u[k=='e'?'et':'tt']),lb=k=='e'?'Engine':'Turbo';if(!ty)return`<div class=ucg>${lb}</div><p class=m>No type assigned yet.</p>`;
-  return`<div class=ucg>${lb} &middot; ${esc(ty.n)}</div>`+UP_NM(k).map((nm,i)=>{const m=upMax(ty,i),l=Math.min(m,+((u[k]||[])[i])||0);return upComp(nm,l,m,false)}).join('')};
- return`<div class=ugc>${hd}${grp('e')}${grp('t')}</div>`}
-function upForm(e,t){const dids=t.d.slice(0,2).filter(Boolean),u=t.up||{},ok=dids.length&&dids.every(d=>(u.d||{})[d]);if(!ok)return'';const lock=!!u.lk,
- sel=`<select id=um_${t.id}${lock?' disabled':''}><option value="50"${lock&&u.m!='70'?' selected':''}>50:50 (equal)</option>${dids.map(d=>`<option value="70:${d}"${lock&&u.m=='70'&&u.f==d?' selected':''}>70:30, focus ${esc(upDn(d))}</option>`).join('')}</select>`,
- picks=dids.map(d=>{const ud=u.d[d];return`<div class=ucg>${esc(upDn(d))}</div>`+['e','t'].map(k=>{const ty=upTy(e,k,ud[k=='e'?'et':'tt']);if(!ty)return'';return UP_NM(k).map((nm,i)=>{const m=upMax(ty,i),l=Math.min(m,+((ud[k]||[])[i])||0),full=l>=m;return`<label class="upk${full?' dis':''}"><input type=checkbox id="uk_${t.id}_${d}_${k}${i}"${full?' disabled':''}><span>${k=='e'?'Engine':'Turbo'}: ${esc(nm)}</span><em>${full?'MAX':'Lv.'+l+'&gt;Lv.'+(l+1)}</em></label>`}).join('')}).join('')}).join('');
- return`<details class=ugf><summary>Submit an upgrade report</summary><label class=k>WhatsApp number (Team Principal or Team Owner)</label><input id=uw_${t.id} inputmode=tel placeholder="+62...">
-<label class=k>Total CP to spend</label><input id=ut_${t.id} type=number min=1 inputmode=numeric>
-<label class=k>Split between the two drivers${lock?' (locked by the admin)':''}</label>${sel}
-<p class=m style="margin-top:12px">Choose the components to upgrade for each driver. One level per component in each report.</p>${picks}
-<label class=k>Note (optional)</label><input id=un_${t.id} maxlength=300>
-<button class=bt onclick="upSend('${t.id}')">Send report</button><button class="bt s" onclick="upList('${t.id}')">Check my reports</button><div id=ur_${t.id}></div></details>`}
-const upMsg=(tid,m,bad)=>{const b=$('#ur_'+tid);if(b)b.innerHTML=`<p class=m style="margin-top:10px;color:${bad?'#e5252a':'#18b26b'}">${esc(m)}</p>`};
-async function upSend(tid){const t=S.tm.find(x=>x.id==tid),e=t&&S.ev.find(x=>x.id==t.ev);if(!t||!e)return;
- const dids=t.d.slice(0,2).filter(Boolean),items={};let pick=false;
- dids.forEach(d=>{const o={e:[0,0,0,0],t:[0,0,0,0]};['e','t'].forEach(k=>[0,1,2,3].forEach(i=>{const c=$('#uk_'+tid+'_'+d+'_'+k+i);if(c&&c.checked){o[k][i]=1;pick=true}}));items[d]=o});
- const ms=$('#um_'+tid).value,m=ms.indexOf('70')==0?'70':'50',f=m=='70'?ms.split(':')[1]:'',total=parseInt($('#ut_'+tid).value),wa=$('#uw_'+tid).value.trim();
- if(!wa)return upMsg(tid,'Enter the WhatsApp number of your Team Principal or Team Owner.',1);if(!(total>=1))return upMsg(tid,'Enter the CP amount you want to spend.',1);if(!pick)return upMsg(tid,'Select at least one component to upgrade.',1);
- upMsg(tid,'Sending...');
- try{const r=await fetch('/api/upgrade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'submit',ev:e.id,team:tid,wa,total,m,f,items,note:$('#un_'+tid).value})}),j=await r.json().catch(()=>({}));
-  if(!r.ok)return upMsg(tid,j.err||'Could not send. Try again.',1);
-  document.querySelectorAll('[id^="uk_'+tid+'_"]').forEach(c=>c.checked=false);upMsg(tid,'Report sent. The admin will review it.')}catch(x){upMsg(tid,'No connection. Try again.',1)}}
-async function upList(tid){const t=S.tm.find(x=>x.id==tid),e=t&&S.ev.find(x=>x.id==t.ev),wa=($('#uw_'+tid)||{}).value;if(!t||!e)return;if(!wa||!wa.trim())return upMsg(tid,'Enter the WhatsApp number of your Team Principal or Team Owner first.',1);
- upMsg(tid,'Loading...');
- try{const r=await fetch('/api/upgrade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'list',ev:e.id,team:tid,wa:wa.trim()})}),j=await r.json().catch(()=>({}));
-  if(!r.ok)return upMsg(tid,j.err||'Could not load. Try again.',1);
-  $('#ur_'+tid).innerHTML=(j.reps||[]).length?j.reps.map(x=>`<div class=urp><b class="st-${x.st}">${{p:'Pending',a:'Accepted',r:'Rejected'}[x.st]||x.st}</b> &middot; ${new Date(x.at).toLocaleDateString()} &middot; ${x.total} CP (${esc(upSplit(x))})<br>${upSum(t,x)}${x.why?`<br><span class=m>Reason: ${esc(x.why)}</span>`:''}${x.note?`<br><span class=m>Note: ${esc(x.note)}</span>`:''}</div>`).join(''):'<p class=m style="margin-top:10px">No reports yet.</p>'}catch(x){upMsg(tid,'No connection. Try again.',1)}}
-function pUpg(e){if(!upOn(e))return'<p class=m>The upgrade system is not open for this event.</p>';const ts=evT(e);if(!ts.length)return'<p class=m>No teams yet.</p>';
- return'<p class=m>Engine and turbo development. Filled boxes are upgrades already done; outlined boxes are upgrades still available. Each driver upgrades separately.</p>'+ts.map(t=>{const dids=t.d.slice(0,2).filter(Boolean);return`<div class=ugt style="border-left:4px solid ${t.col}"><div class=ugh><b style="color:${txT(t)}">${esc(t.name)}</b><span class=m>${esc(upRatioTxt(t,upDn))}</span></div><div class=ugd>${dids.map(d=>upCard(e,t,d)).join('')}</div>${upForm(e,t)}</div>`}).join('')}
 function render(){const p=location.hash.slice(1).split('/'),k=p[1];let A='#e10600',T='',bk='',b,tb,e,r;
 const rt=a=>[['Events','#/'],['Legends Board','#/board']].map(([n,h],i)=>[n,h,i==a]);
 const et=(e,a)=>[['Races','#/e/'+e.id+'/race'],['Standings','#/e/'+e.id+'/stand'],['Teams','#/e/'+e.id+'/teams'],['Tyres','#/e/'+e.id+'/tyres'],['Reserves','#/e/'+e.id+'/reserves']].concat(upOn(e)?[['Upgrades','#/e/'+e.id+'/up']]:[]).map(([n,h],i)=>[n,h,i==a]);
-if(k=='e'&&(e=S.ev.find(x=>x.id==p[2]))){A=dc(e);T=e.name;TSP=e.sp||'';TSL=e.slogo||'';TEV=e;bk='#/';const s=p[3]||'race';b=s=='stand'?pStand(e,p[4],p[5]):s=='teams'?pTeams(e):s=='tyres'?pTyres(e):s=='reserves'?pReserves(e):s=='up'?pUpg(e):pRace(e);tb=et(e,['race','stand','teams','tyres','reserves','up'].indexOf(s))}
+if(k=='e'&&(e=S.ev.find(x=>x.id==p[2]))){tyReg(e);A=dc(e);T=e.name;TSP=e.sp||'';TSL=e.slogo||'';TEV=e;bk='#/';const s=p[3]||'race';b=s=='stand'?pStand(e,p[4],p[5]):s=='teams'?pTeams(e):s=='tyres'?pTyres(e):s=='reserves'?pReserves(e):s=='up'?pUpg(e):pRace(e);tb=et(e,['race','stand','teams','tyres','reserves','up'].indexOf(s))}
 else if(k=='r'&&(r=S.rc.find(x=>x.id==p[2]))&&(e=S.ev.find(x=>x.id==r.ev))){A=dc(e);T=e.name;TSP=e.sp||'';TSL=e.slogo||'';TEV=e;bk='#/e/'+e.id+'/race';b=pRes(e,r,p[3]);tb=et(e,0)}
 else if(k=='board'){T='Legends Board';b=pBoard(p[2],p[3]);tb=rt(1)}
 else if(k=='daftar'){T='Register';bk='#/';b=pDaftar();tb=rt(-1)}

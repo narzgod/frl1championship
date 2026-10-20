@@ -53,6 +53,23 @@ body{background:#0b0707 radial-gradient(ellipse at top,#3a0b0b 0%,#0b0707 60%) f
 </div>
 
 <script>
+(function(){
+  function show(prefix,msg,extra){
+    var b=document.createElement('div');
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#b00020;color:#fff;padding:14px;font:12px/1.5 monospace;white-space:pre-wrap;max-height:60vh;overflow:auto;box-shadow:0 2px 10px rgba(0,0,0,.5)';
+    b.textContent=prefix+': '+msg+(extra?'\n'+extra:'');
+    (document.body||document.documentElement).appendChild(b);
+  }
+  window.addEventListener('error',function(e){
+    show('JS ERROR',e.message||String(e.error),(e.filename?e.filename+':'+e.lineno+':'+e.colno:'')+((e.error&&e.error.stack)?'\n'+e.error.stack:''));
+  });
+  window.addEventListener('unhandledrejection',function(e){
+    var r=e.reason;
+    show('PROMISE ERROR',(r&&r.message)||String(r),(r&&r.stack)||'');
+  });
+})();
+</script>
+<script>
 const TOOLS=[
  {g:"poster",id:"race-result",  t:"Race Result",       d:"Poster hasil race: podium P1-P3 dan daftar P4-P10",           img:"/owner/assets/f1c.jpg",    src:"/owner/tools/race-result/index.html"},
  {g:"poster",id:"poster-studio",t:"Poster Studio",     d:"Studio poster lengkap: Winner, Pole, Fastest dan lainnya",     img:"/owner/assets/studio.jpg", src:"/owner/tools/poster-studio/index.html"},

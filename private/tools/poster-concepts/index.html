@@ -56,7 +56,7 @@ const BASE={type:'pole',cn:0,t1:'POLE',t2:'POSITION',first:'Felipe',last:'Drugov
 let Z=Object.assign({},BASE);
 try{const s=JSON.parse(localStorage.getItem('pc2')||'null');if(s)Z=Object.assign({},BASE,s)}catch(e){}
 /* drivers, teams and all pictures live in IndexedDB (pictures are too big for localStorage) */
-let P={teams:[],drivers:[],img:{}};
+let P={teams:[],drivers:[],img:{},fonts:[]};
 const IDBP=new Promise(r=>{try{const q=indexedDB.open('poster-concepts',1);q.onupgradeneeded=()=>q.result.createObjectStore('k');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}catch(e){r(null)}});
 let svT;const flushP=async()=>{const d=await IDBP;if(d)try{d.transaction('k','readwrite').objectStore('k').put({P,Z},'s')}catch(e){}};
 const save=()=>{try{localStorage.setItem('pc2',JSON.stringify(Z))}catch(e){}clearTimeout(svT);svT=setTimeout(flushP,500)};
@@ -320,8 +320,13 @@ ${m=='flat'?`<div class="card"><h3>Warna latar</h3>${col('bg1','Warna')}</div>`:
 ${m=='custom'?`<div class="card"><h3>Gambar latar</h3>${up('bg','Gambar latar','Foto sirkuit, trek, atau desain jadi. Otomatis memenuhi poster.')}${rg('bgz','Zoom',1,3,.01)}${rg('bgx','Geser kiri / kanan',-.5,.5,.01)}${rg('bgy','Geser atas / bawah',-.5,.5,.01)}${rg('bgd','Gelapkan',0,.85,.01)}${rg('bgb','Blur (tidak semua HP mendukung)',0,30,1)}</div>`:''}`}
 function panelGaya(){return`<div class="card"><h3>Warna</h3>${col('ac','Warna aksen')}${col('tx','Warna teks')}</div>
 <div class="card"><h3>Font</h3><label>Font judul</label><select data-k="fd" data-r="1">${opts(fontList(),Z.fd)}</select><label>Font teks</label><select data-k="ft" data-r="1">${opts(fontList(),Z.ft)}</select>
-<label>Tambah font sendiri (.ttf .otf .woff)</label><input type="file" accept=".ttf,.otf,.woff,.woff2" data-font="1">${rg('fs','Ukuran teks keseluruhan',.6,1.3,.01)}</div>`}
-const EXTRA=[];const fontList=()=>[['MotoGP Display','MotoGP Display'],['MotoGP Text','MotoGP Text'],['Impact','Impact'],['Arial Black','Arial Black'],['Georgia','Georgia'],['system-ui','Sans-serif sistem']].concat(EXTRA.map(n=>[n,n]));
+<label>Tambah font sendiri (.ttf .otf .woff)</label><input type="file" data-font="1"><small>${esc(FMSG)}</small>${rg('fs','Ukuran teks keseluruhan',.6,1.3,.01)}</div>`}
+let FMSG='';const EXTRA=[];
+/* custom fonts are kept in the browser database (P.fonts) so they are still there after a reload */
+const b64=buf=>{let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)};
+const fontOk=buf=>{const u=new Uint8Array(buf.slice(0,4)),t=String.fromCharCode(u[0],u[1],u[2],u[3]);return(u[0]==0&&u[1]==1&&u[2]==0&&u[3]==0)||t=='OTTO'||t=='true'||t=='wOFF'||t=='wOF2'};
+const loadUF=f=>new FontFace(f.n,`url(${f.d})`).load().then(ff=>{document.fonts.add(ff);if(!EXTRA.includes(f.n))EXTRA.push(f.n)});
+const fontList=()=>[['MotoGP Display','MotoGP Display'],['MotoGP Text','MotoGP Text'],['Impact','Impact'],['Arial Black','Arial Black'],['Georgia','Georgia'],['system-ui','Sans-serif sistem']].concat(EXTRA.map(n=>[n,n]));
 function render(){$('#tabs').innerHTML=TABS.map((n,i)=>`<button class="${i==tab?'on':''}" data-tab="${i}">${n}</button>`).join('');
  $('#panels').innerHTML=`<div class="p on">${[panelJenis,panelIsi,panelData,panelLogo,panelLatar,panelGaya][tab]()}</div>`}
 function setType(t){Z.type=t;Z.cn=0;applyDef()}
@@ -375,7 +380,12 @@ document.addEventListener('input',e=>{const t=e.target,d=t.dataset;
 const defer=()=>setTimeout(()=>{render();redraw()},0);
 document.addEventListener('change',e=>{const t=e.target,d=t.dataset;
  if(d.img&&t.files&&t.files[0]){const k=d.img;packImg(t.files[0],dsz(k)).then(u=>{if(!u)return;P.img[k]=u;return imgFrom(k,u)}).then(()=>{save();defer()})}
- else if(d.font&&t.files&&t.files[0]){const f=t.files[0],nm=f.name.replace(/\.[^.]+$/,''),r=new FileReader();r.onload=()=>{new FontFace(nm,r.result).load().then(ff=>{document.fonts.add(ff);if(!EXTRA.includes(nm))EXTRA.push(nm);Z.fd=nm;defer()}).catch(()=>alert('Font tidak bisa dibaca.'))};r.readAsArrayBuffer(f)}
+ else if(d.font&&t.files&&t.files[0]){const f=t.files[0];t.value='';const nm=f.name.replace(/\.[^.]+$/,'').replace(/[^\w\- ]/g,'').trim()||'Font '+((P.fonts||[]).length+1),r=new FileReader();
+  r.onerror=()=>{FMSG='File font tidak bisa dibaca.';defer()};
+  r.onload=()=>{if(!fontOk(r.result)){FMSG='Bukan file font yang didukung. Pilih file .ttf, .otf, .woff atau .woff2.';defer();return}
+   const o={n:nm,d:'data:font/ttf;base64,'+b64(r.result)};
+   loadUF(o).then(()=>{P.fonts=(P.fonts||[]).filter(x=>x.n!=nm);P.fonts.push(o);Z.fd=nm;save();FMSG='Font "'+nm+'" ditambahkan dan dipakai untuk judul. Pilih juga di "Font teks" kalau ingin dipakai untuk teks.';defer()}).catch(()=>{FMSG='Font ini tidak bisa dipakai oleh browser. Coba file font lain.';defer()})};
+  r.readAsArrayBuffer(f)}
  else if(d.k&&(d.r||d.bgsel)){const k=d.k;Z[k]=t.value;if(d.bgsel){const x=BGDEF[Z.bgk];Z.bg1=x[0];Z.bg2=x[1]}save();defer()}
  else if(d.drv){pickDriver(t.value);save();defer()}
  else if(d.gd!==undefined){Z.grid[+d.gd].d=t.value;save();redraw()}
@@ -387,9 +397,10 @@ document.addEventListener('change',e=>{const t=e.target,d=t.dataset;
 const q=new URLSearchParams(location.search).get('t');if(q&&DD[q]&&q!=Z.type){Z.type=q;Z.cn=0;applyDef()}
 Z.tmc=Z.tmc||{};
 (async()=>{try{await Promise.all([document.fonts.load('700 40px "MotoGP Display"'),document.fonts.load('400 40px "MotoGP Text"'),document.fonts.load('700 40px "MotoGP Text"')])}catch(e){}
- const st=await loadP();if(st&&st.P){P=Object.assign({teams:[],drivers:[],img:{}},st.P);P.img=P.img||{};if(!Z.grid&&st.Z)Z=Object.assign({},BASE,st.Z,{tmc:st.Z.tmc||{}})}
+ const st=await loadP();if(st&&st.P){P=Object.assign({teams:[],drivers:[],img:{},fonts:[]},st.P);P.img=P.img||{};P.fonts=P.fonts||[];if(!Z.grid&&st.Z)Z=Object.assign({},BASE,st.Z,{tmc:st.Z.tmc||{}})}
  Z.tmc=Z.tmc||{};
  await Promise.all(Object.entries(P.img).map(([k,u])=>imgFrom(k,u)));
+ await Promise.all((P.fonts||[]).map(f=>loadUF(f).catch(()=>{})));
  if(!Z.grid){if(!P.drivers.length&&!P.teams.length)seedData();else{Z.grid=[];Z.line=[]}}
  ensureRows();render();draw();save()})();
 </script><script src="/owner/tools/combo.js"></script><script src="/owner/tools/prev.js"></script></body></html>
