@@ -6,6 +6,8 @@ const BASE = [250, 300, 450, 700, 900], MUL = [1.5, 1.25, 1, 0.8];
 const lvIdx = lv => Math.min(Math.max(lv, 1), 5) - 1;
 const costOf = (e, k, i, lv) => { const row = (((e.up || {}).cc || {})[k] || [])[i], v = row && +row[lvIdx(lv)]; return row && row.length && v >= 0 ? v : Math.round(BASE[lvIdx(lv)] * MUL[i] / 10) * 10; };
 const maxOf = (set, k, i) => { const m = +((((set || {})[k === 'e' ? 'd' : 'td'] || [])[i]) || {}).m; return m >= 1 && m <= 8 ? m : 5; };
+/* split of the report budget between the two main drivers: 50:50, or 70:30 with a focus driver */
+const shares = (dids, m, f, total) => { const o = {}; if (dids.length < 2) { dids.forEach(d => { o[d] = total; }); return o; } if (m === '70' && dids.includes(f)) { const a = Math.round(total * 0.7); dids.forEach(d => { o[d] = d === f ? a : total - a; }); } else { const h = Math.floor(total / 2); o[dids[0]] = total - h; o[dids[1]] = h; } return o; };
 const entry = (k, cp, extra) => Object.assign({ id: uid(), at: Date.now(), k, cp }, extra || {});
 const THROTTLE = 8, WINDOW = 600;
 module.exports = async (req, res) => {
@@ -28,7 +30,7 @@ module.exports = async (req, res) => {
     tm.up.d = tm.up.d || {}; tm.up.r = tm.up.r || []; tm.up.led = tm.up.led || [];
     const sm = L.sum(tm);
     if (b.kind === 'info') {
-      return res.status(200).json({ sum: sm, reps: tm.up.r.slice(-20).reverse().map(r => ({ id: r.id, at: r.at, cost: r.cost, items: r.items, note: r.note, st: r.st, why: r.why })), led: tm.up.led.slice(-30).reverse().map(x => ({ at: x.at, k: x.k, cp: x.cp, q: x.q, note: x.note })) });
+      return res.status(200).json({ cfg: e.up, tu: { et: tm.up.et || '', d: tm.up.d, sp: tm.up.sp || [], lk: !!tm.up.lk, m: tm.up.m || '', f: tm.up.f || '' }, sum: sm, reps: tm.up.r.slice(-20).reverse().map(r => ({ id: r.id, at: r.at, cost: r.cost, m: r.m, f: r.f, bud: r.bud, sh: r.sh, dc: r.dc, items: r.items, note: r.note, st: r.st, why: r.why })), led: tm.up.led.slice(-30).reverse().map(x => ({ at: x.at, k: x.k, cp: x.cp, q: x.q, note: x.note })) });
     }
     if (b.kind === 'buy') {
       let cp = 0, ent = null;
@@ -50,7 +52,7 @@ module.exports = async (req, res) => {
       if (!set || !dids.length || !dids.every(d => tm.up.d[d])) return fail('Upgrades are not set up for your team yet. Ask the admin.');
       if (sm.pk) return fail('Your team bought an HP package, so car upgrades are closed.');
       if (tm.up.r.some(r => r.st === 'p')) return fail('You already have a report waiting for the admin. Please wait for the decision.');
-      const items = {}; let n = 0, cost = 0;
+      const items = {}, dc = {}; let n = 0, cost = 0;
       const name = d => (s.dr.find(x => x.did == d) || {}).name || d;
       for (const d of dids) {
         const ud = tm.up.d[d], it = (b.items && b.items[d]) || {}, o = { e: [0, 0, 0, 0], t: [0, 0, 0, 0] };
@@ -58,13 +60,21 @@ module.exports = async (req, res) => {
           if (!+((it[k] || [])[i])) continue;
           const lv = +((ud[k] || [])[i]) || 0;
           if (lv >= maxOf(set, k, i)) return fail('A selected component of ' + name(d) + ' is already at its maximum level.');
-          o[k][i] = 1; n++; cost += costOf(e, k, i, lv + 1);
+          const c1 = costOf(e, k, i, lv + 1); o[k][i] = 1; n++; cost += c1; dc[d] = (dc[d] || 0) + c1;
         }
         items[d] = o;
       }
       if (!n) return fail('Select at least one component to upgrade.');
       if (sm.cp < cost) return fail('Not enough team CP. This report costs ' + cost + ' CP, team has ' + sm.cp + ' CP.');
-      tm.up.r.push({ id: uid(), at: Date.now(), cost, items, note: t(b.note, 300), st: 'p' });
+      /* split: the admin can lock the team's choice; otherwise the team chooses in each report */
+      let m = b.m === '70' ? '70' : '50', f = t(b.f, 8);
+      if (tm.up.lk && tm.up.m) { m = tm.up.m === '70' ? '70' : '50'; f = tm.up.f || ''; }
+      if (m === '70' && !dids.includes(f)) return fail('Choose which driver gets the 70% focus.');
+      const bud = Math.floor(+b.budget);
+      if (!(bud >= cost)) return fail('Your CP budget must cover the total cost (' + cost + ' CP).');
+      const sh = shares(dids, m, f, bud);
+      for (const d of dids) if ((dc[d] || 0) > sh[d]) return fail(name(d) + ' needs ' + (dc[d] || 0) + ' CP but gets only ' + sh[d] + ' CP from this split. Raise the budget, change the split or move upgrades to the other driver.');
+      tm.up.r.push({ id: uid(), at: Date.now(), cost, m, f: m === '70' ? f : '', bud, sh, dc, items, note: t(b.note, 300), st: 'p' });
       await L.putState(s);
       return res.status(200).json({ ok: true, cost });
     }
