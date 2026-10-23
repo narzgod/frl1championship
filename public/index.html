@@ -15,7 +15,7 @@
   });
 })();
 </script>
-<script>try{if(localStorage.getItem("frl-theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script><link rel="stylesheet" href="style.css?v=20261024"><title>fRacing Legends</title></head><body>
+<script>try{if(localStorage.getItem("frl-theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script><link rel="stylesheet" href="style.css?v=20261026"><title>fRacing Legends</title></head><body>
 <div id="top"><div class="tb" id="tb"></div></div><div class="w"><div id="msg"></div><div id="app"></div></div><div id="bar"></div>
 <script src="core.js"></script>
 <script src="flags.js"></script>
@@ -24,12 +24,12 @@
 <script>
 const dc=e=>e.col||'#e10600',stripe=(c,c2)=>`--a:${c};--c2:${c2||c};--stripe:linear-gradient(${c},${c2||c})`;
 const tierLbl=k=>k=='all'?'All':k.charAt(0).toUpperCase()+k.slice(1);
-const nameTag=(n,c,c2)=>`<span class=tn style="color:${c};--c2:${c2||'transparent'}">${esc(n)}</span>`;
+const nameTag=(n,c,c2)=>tnm(n,c,c2);
 function pHome(){return'<h2 class=ph>Events</h2>'+(S.ev.length?S.ev.map(e=>`<a class=cd style="--a:${dc(e)}" href="#/e/${e.id}/race"><div class=ev>${e.sp?`<div class=sp>${esc(e.sp)}</div>`:''}<div class=nm>${esc(e.name)}</div><div class=mt><span><b style="color:${tierCol(clsOf(e))}">${clsOf(e)}</b> · <span style="${isFull(e)?'color:#e5252a;font-weight:800':''}">${evT(e).length}/${e.quota}</span> teams</span><span class="st ${isOpen(e)&&!isFull(e)?'on':''}">${regTxt(e)}</span></div></div></a>`).join(''):'<p class=m>No events yet.</p>')}
 function pRace(e){const rs=S.rc.filter(r=>r.ev==e.id);
 if(!rs.length)return'<p class=m>No races scheduled yet.</p>';
 return'<div class=sec>Race calendar</div>'+rs.map(r=>{const rows=r.fe.length?r.fe:r.sp,top=rows.filter(x=>!x.st).slice(0,3);
-return`<a class=cd href="#/r/${r.id}"><div class=rw><div class=fw>${flagImg(r.flag,64,44)}</div><div class=nm>${esc(r.circ)}<small>${esc(r.country)}${r.date?' · '+esc(r.date):''}</small></div><span class="chip ${rows.length?'on':''}">${rows.length?'Completed':'Upcoming'}</span></div>${top.length?`<div class=tp>${top.map((x,i)=>`<span><b class=pb>${i+1}</b><span style="color:${tcR(e,x.did,r,r.fe.length?'fe':'sp')}">${esc(sn(dn(x.did)))}</span></span>`).join('')}</div>`:''}</a>`}).join('')}
+return`<a class=cd href="#/r/${r.id}"><div class=rw><div class=fw>${flagImg(r.flag,64,44)}</div><div class=nm>${esc(r.circ)}<small>${esc(r.country)}${r.date?' · '+esc(r.date):''}</small></div><span class="chip ${rows.length?'on':''}">${rows.length?'Completed':'Upcoming'}</span></div>${top.length?`<div class=tp>${top.map((x,i)=>`<span><b class=pb>${i+1}</b>${tnm(sn(dn(x.did)),tcR(e,x.did,r,r.fe.length?'fe':'sp'),tmR(e,x.did,r,r.fe.length?'fe':'sp').col2,'sm')}</span>`).join('')}</div>`:''}</a>`}).join('')}
 function pRes(e,r,ses){const av=Object.keys(NM).filter(s=>get(r,s).length),h0=`<div class=rh><div class=fw style="flex-basis:92px;width:92px">${flagImg(r.flag,92,64)}</div><div><h2>${esc(r.circ)}</h2>`;
 if(!av.length)return h0+'</div></div><p class=m>No results yet.</p>';
 if(!av.includes(ses))ses=av.includes('fe')?'fe':av.includes('sp')?'sp':av[av.length-1];
@@ -38,7 +38,7 @@ EXP={title:e.name+' - '+r.circ,sub:NM[ses]+(r.date?' - '+r.date:''),note:[['Pole
 return h0+`<div>${NM[ses]}</div></div></div><div class=fx>${isR?`<div>Fastest Lap<i>${esc(dn(r.fl[ses])||'-')}</i></div>`:''}<div>Pole Position<i>${pole}${plt?` <span class=lt>${esc(plt)}</span>`:''}</i></div>${isR?`<div>Driver of the Race<i>${esc(dn(r.dr[ses])||'-')}</i></div>`:''}</div>`+
 chips(av.map(s=>[NM[s],'#/r/'+r.id+'/'+s,s==ses]))+
 tbl(['Pos','No','Driver','Team','Grid','Tyre'],rows.map((x,i)=>{const c=tcR(e,x.did,r,ses),g=isR?(q.findIndex(y=>y.did==x.did)+1||'-'):i+1;
-return[`<b class="pb ${x.st?'dim':i==0?'p1':''}">${stx(x.st)||i+1}</b>`,`<span style="color:${c}">${esc(noR(e,x.did,r,ses))}</span>`,esc(dn(x.did)),nameTag(tmR(e,x.did,r,ses).name||'-',txT(tmR(e,x.did,r,ses)),tmR(e,x.did,r,ses).col2),g,tyDot(x.tyre)]}),.3)+expBtn()}
+return[`<b class="pb ${x.st?'dim':i==0?'p1':''}">${stx(x.st)||i+1}</b>`,tnm(noR(e,x.did,r,ses),c,tmR(e,x.did,r,ses).col2,'sm'),esc(dn(x.did)),nameTag(tmR(e,x.did,r,ses).name||'-',txT(tmR(e,x.did,r,ses)),tmR(e,x.did,r,ses).col2),g,tyDot(x.tyre)]}),.3)+expBtn()}
 let FULL=false;
 const togFull=()=>{FULL=!FULL;render();pgAnim(1)};
 const fullBtn=()=>`<button type=button class=bt style="margin:0 0 12px" onclick="togFull()">${FULL?'&lsaquo; Back to compact view':'Show full statistics &rsaquo;'}</button>`;
@@ -69,7 +69,7 @@ if(!L.length)return h+'<p class=m>No drivers in this tier yet.</p>';
 return h+fullBtn()+tblC(['Pos','Driver','Team','Tier','Starts','Wins','Podium','Pole','S.Wins','Titles','Win Rate','<span class=hl>LP</span>'],L.map((x,i)=>[`<b class="pb ${i?'':'p1'}">${i+1}</b>`,nameTag(x.n,'#fff'),nameTag(x.t,x.tt||x.c,x.c2),'<b style="color:'+(tierCol(x.cls)||'inherit')+'">'+x.cls+'</b>',x.v.r,x.v.w,x.v.pd,x.v.po,x.v.sw,x.v.t,x.wr+'%',`<span class=hl>${x.lp}</span>`]),FULL?.3:.6,10,FULL?null:[0,1,3,9,10,11])+vHint(L.length,10)+expBtn()}
 function pTeams(e){const ts=evT(e),ok=isOpen(e)&&!isFull(e),rc=rsCount(e);
 return`<div class=hero><small>Team slots</small><b style="${ts.length>=e.quota?'color:#e5252a':''}">${ts.length} / ${e.quota}</b><span>${regTxt(e)}</span></div>`+(ok?`<a class=cd href="daftar-tim.html?e=${e.id}"><div class=rw><div class=nm>Register a team<small>Open the team registration page</small></div><span>&rsaquo;</span></div></a>`:'')+
-(ts.length?'<div class=sec>Entry list</div>':'<p class=m>No teams registered yet.</p>')+ts.map(t=>`<div class=cd style="${stripe(t.col||'#8b93a7',t.col2)}"><div class=rw><div class=nm style="color:${txT(t)}">${esc(t.name)}<small>${e.soc&&t.soc?esc(t.soc)+' · ':''}Team Principal ${esc(t.tp)} · Team Owner ${esc(t.ow)}</small></div></div><div class=tp>${t.d.map((d,i)=>d?`<span class=m>${['D1','D2','R1','R2'][i]}</span><span>${(t.num||{})[d]?'#'+t.num[d]+' ':''}${esc(dn(d))}${i>1?` <span class=m style="${(rc[t.id+'|'+(i-1)]||0)>=RSL?'color:#e5252a;font-weight:800':''}">&middot; reserve left ${Math.max(0,RSL-(rc[t.id+'|'+(i-1)]||0))}/${RSL}</span>`:''}</span>`:'').join('')}</div></div>`).join('')}
+(ts.length?'<div class=sec>Entry list</div>':'<p class=m>No teams registered yet.</p>')+ts.map(t=>`<div class=cd style="${stripe(t.col||'#8b93a7',t.col2)}"><div class=rw><div class=nm>${tnm(t.name,txT(t),t.col2)}<small>${e.soc&&t.soc?esc(t.soc)+' · ':''}Team Principal ${esc(t.tp)} · Team Owner ${esc(t.ow)}</small></div></div><div class=tp>${t.d.map((d,i)=>d?`<span class=m>${['D1','D2','R1','R2'][i]}</span><span>${(t.num||{})[d]?'#'+t.num[d]+' ':''}${esc(dn(d))}${i>1?` <span class=m style="${(rc[t.id+'|'+(i-1)]||0)>=RSL?'color:#e5252a;font-weight:800':''}">&middot; reserve left ${Math.max(0,RSL-(rc[t.id+'|'+(i-1)]||0))}/${RSL}</span>`:''}</span>`:'').join('')}</div></div>`).join('')}
 function pTyres(e){const all=evD(e),ds=all.filter(d=>!tyHid(e,d));if(!all.length)return'<p class=m>No drivers yet.</p>';if(!ds.length)return'<p class=m>All drivers are hidden from this list.</p>';
 const qt=e.qm=='each'?'Qualifying counts every session.':'Qualifying counts once per race.';
 EXP={title:e.name,sub:'Tyre Stock',note:[['q','Qualifying'],['r','Race']].map(([k,n])=>['Total stock - '+n,tcOf(e).map(c=>c+' '+tyLim(e,k,c)).join(' \u00b7 ')])};

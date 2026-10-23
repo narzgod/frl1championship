@@ -12,7 +12,7 @@ if(r.status==401)return say('Session expired. Open the owner menu again and ente
 const j=await r.json();BASE=j.ts;if(j.merged){S=j.s;loc();if(typeof render=='function')render()}}catch(e){say('No connection. Changes are saved only in this browser for now.')}}
 async function load(){try{const r=await fetch('/api/state',{cache:'no-store',credentials:'same-origin'});if(!r.ok)return;const j=await r.json();SYNC='cloud';BASE=j.ts;
 if(j.s){S=j.s;['ev','dr','tm','rc'].forEach(k=>S[k]=S[k]||[]);loc()}else if(ADMIN&&(S.ev.length||S.dr.length||S.tm.length||S.rc.length))await doPush()}catch(e){}}
-const READY=load();
+const READY=load();READY.then(()=>{if(!ADMIN&&!TEV)evFont(S.cfg)});
 const $=s=>document.querySelector(s),say=t=>{const m=$('#msg');if(m){m.textContent=t;m.classList.remove('pop');void m.offsetWidth;m.classList.add('pop')}};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const CL=['ROOKIE TIER','CONTENDER TIER','PREMIER TIER','ELITE TIER','MASTERS TIER','LEGENDS TIER'],CLOLD={'ROOKIE CLASS':'ROOKIE TIER','CLASS D':'CONTENDER TIER','CLASS C':'PREMIER TIER','CLASS B':'ELITE TIER','CLASS A':'MASTERS TIER','CLASS PRO':'LEGENDS TIER'},clsOf=e=>CL.includes(e&&e.cls)?e.cls:(CLOLD[e&&e.cls]||CL[0]),TY=['Soft','Medium','Hard','Inter','Wet'];
@@ -31,6 +31,12 @@ const fl=c=>flagImg(c,32,22);
 const evT=e=>S.tm.filter(t=>t.ev==e.id),evD=e=>[...new Set(evT(e).flatMap(t=>t.d.filter(Boolean)))];
 const isOpen=e=>e.reg!==false,isFull=e=>evT(e).length>=e.quota;
 const regTxt=e=>!isOpen(e)?'Registration Closed':isFull(e)?'Registration Full':'Registration Open';
+/* team-name plate (see style.css): returns a span coloured c; when c would vanish into the page it also gets a livery plate */
+const relL=h=>{const m=/^#?([0-9a-f]{6})$/i.exec(h||'');if(!m)return .2;const n=parseInt(m[1],16);return[n>>16,n>>8&255,n&255].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}).reduce((a,v,i)=>a+v*[.2126,.7152,.0722][i],0)};
+const crat=(a,b)=>{const x=relL(a),y=relL(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+function tnm(n,c,c2,cls){c=hx(c)||'#8b93a7';c2=hx(c2);const L=(parseInt(c.slice(1,3),16)*.299+parseInt(c.slice(3,5),16)*.587+parseInt(c.slice(5,7),16)*.114)/255;let k='',pb='';
+if(L>.72){k=' pl-l';pb=c2&&crat(c,c2)>=3.2?c2:'#14161d'}else if(L<.2){k=' pl-d';pb=c2&&crat(c,c2)>=3.2?c2:'#f2f4f8'}
+return`<span class="tn${cls?' '+cls:''}${k}" style="color:${c}${pb?';--pb:'+pb:''}">${esc(n)}</span>`}
 const tmO=(e,d)=>evT(e).find(t=>t.d.slice(0,2).includes(d))||evT(e).find(t=>t.d.includes(d))||{},txT=t=>(t&&(t.tx||t.col))||'#8b93a7',txD=(t,d)=>txT(t),tc=(e,d)=>txD(tmO(e,d),d),noOf=(e,d)=>(tmO(e,d).num||{})[d]||'-';
 const get=(r,s)=>s[0]=='q'?r.q[+s[1]]:r[s];
 const lastQi=r=>{for(let i=2;i>=0;i--)if(r.q[i]&&r.q[i].length)return i;return -1};/* lap time format: m.ss,hh (example 1.23,45). Older saved times like 1:23.456 are converted on display. */
@@ -84,11 +90,11 @@ const SP_DEF=[{n:'Oracle',k:'m',pn:'season',first:5000,per:20000,pen:40000,wcc:1
 const PK_DEF=[{hp:400,cp:4500},{hp:450,cp:5000}];
 const spLine=x=>{const o=[];if(x.wcc)o.push(x.wcc==1?'WCC win':'WCC top '+x.wcc);if(x.wdc)o.push('WDC top '+x.wdc);if(x.q)o.push('Qualifying top '+x.q);if(x.r)o.push('Race finish top '+x.r);return o.join(' · ')+((x.q&&x.r)?(x.mode=='any'?' (either one)':' (both)'):'')};
 const upShares=(dids,m,f,total)=>{const o={};if(dids.length<2){dids.forEach(d=>o[d]=total);return o}if(m==='70'&&dids.includes(f)){const a=Math.round(total*.7);dids.forEach(d=>o[d]=d==f?a:total-a)}else{const h=Math.floor(total/2);o[dids[0]]=total-h;o[dids[1]]=h}return o};
-const FONTS={disp:['MotoGP Display','"MotoGP Display",Impact,"Arial Black",sans-serif'],text:['MotoGP Text','"MotoGP Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif'],sans:['System sans-serif','system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif'],serif:['Serif','Georgia,"Times New Roman",serif'],mono:['Monospace','ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'],cond:['Condensed','"Arial Narrow","Roboto Condensed",Impact,sans-serif']};
+const FONTS={disp:['MotoGP Display','"MotoGP Display",Impact,"Arial Black",sans-serif'],frl:['fRacing Font','"fRacing Font",Impact,"Arial Black",sans-serif'],text:['MotoGP Text','"MotoGP Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif'],sans:['System sans-serif','system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif'],serif:['Serif','Georgia,"Times New Roman",serif'],mono:['Monospace','ui-monospace,SFMono-Regular,Menlo,Consolas,monospace'],cond:['Condensed','"Arial Narrow","Roboto Condensed",Impact,sans-serif']};
 function fontStack(k,e){const p=e[k=='h'?'fh':'fb'],c=e[k=='h'?'fhc':'fbc'];if(p=='custom'&&c&&c.d)return '"EvF'+k+'",sans-serif';return FONTS[p]?FONTS[p][1]:''}
 function fontCss(e){if(!e)return'';let o='';['h','b'].forEach(k=>{const p=e[k=='h'?'fh':'fb'],c=e[k=='h'?'fhc':'fbc'];if(p=='custom'&&c&&c.d)o+='@font-face{font-family:"EvF'+k+'";src:url('+c.d+') format("'+(c.f||'truetype')+'");font-display:swap}'});const h=fontStack('h',e),b=e.fb=='same'?h:fontStack('b',e);let v='';if(+e.fsh&&+e.fsh!=100)v+='--fsh:'+(e.fsh/100)+';';if(+e.fsb&&+e.fsb!=100)v+='--fsb:'+(e.fsb/100)+';';if(h)v+='--f-title:'+h+';';if(b)v+='--f-ui:'+b+';--f-body:'+b+';';return o+(v?':root{'+v+'}':'')}
 function evFont(e){let st=document.getElementById('evf');if(!st){st=document.createElement('style');st.id='evf';document.head.appendChild(st)}const c=fontCss(e);if(st.textContent!==c)st.textContent=c}
-function mount(T,bk,tabs,body,A){if(!ADMIN)evFont(TEV);const sp=TSP,sl=TSL;TSP='';TSL='';document.body.style.overflow='';try{EXP.sp=sp}catch(_){}A=A||'#e10600';const r=document.documentElement.style;r.setProperty('--a',A);r.setProperty('--ac',contrast(A));
+function mount(T,bk,tabs,body,A){if(!ADMIN)evFont(TEV||S.cfg);const sp=TSP,sl=TSL;TSP='';TSL='';document.body.style.overflow='';try{EXP.sp=sp}catch(_){}A=A||'#e10600';const r=document.documentElement.style;r.setProperty('--a',A);r.setProperty('--ac',contrast(A));
 if(ADMIN){$('#tb').className='tb';$('#tb').innerHTML=(bk?`<a class=bk href="${bk}">&larr;</a>`:'')+(T?`<h1>${sp?`<small class=hsp>${esc(sp)}</small>`:''}${esc(T)}</h1>`:'<div class=br>fRacing <b>LEGENDS</b></div>')}else{$('#tb').className='tb2';$('#tb').innerHTML=hdrHtml(T,bk,sp,sl);TEV=null;setTheme(getTheme())}
 $('#bar').innerHTML=tabs?tabs.map(([n,h,on])=>`<a href="${h}" class="${on?'on':''}">${n}</a>`).join(''):'';$('#bar').style.display=tabs?'flex':'none';$('#app').innerHTML=body;pgAnim();requestAnimationFrame(fitTables)}
 /* zoom wide tables out so everything fits on screen (data-fit = smallest allowed zoom) */

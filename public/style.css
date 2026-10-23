@@ -2,6 +2,7 @@
 @font-face{font-family:"MotoGP Display";src:url(/fonts/MotoGP_Display_Bold.ttf) format("truetype");font-weight:700;font-display:swap}
 @font-face{font-family:"MotoGP Text";src:url(/fonts/MotoGPText-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
 @font-face{font-family:"MotoGP Text";src:url(/fonts/MotoGPText-Bold.ttf) format("truetype");font-weight:700;font-display:swap}
+@font-face{font-family:"fRacing Font";src:url(/fonts/fRacingFont-Bold.woff) format("woff"),url(/fonts/fRacingFont-Bold.ttf) format("truetype");font-weight:100 900;font-display:swap}
 :root{--f-title:"MotoGP Display",Impact,"Arial Black",sans-serif;--f-ui:"MotoGP Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--f-body:"MotoGP Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 /* title = Display Bold (brand, headings, names, numbers) | ui = Text Bold (labels, tabs, buttons, table heads) | body = Text Regular */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -52,7 +53,9 @@ button.x{background:var(--s2);border:1px solid var(--ln);color:var(--t);border-r
 .ev{padding:14px 16px 12px 20px}.ev .nm{padding:0;font-size:calc(18px*var(--fsb,1))}
 .mt{display:flex;justify-content:space-between;gap:10px;font-size:calc(12px*var(--fsb,1));color:var(--m);font-weight:500;margin-top:8px}.mt .st.on{color:var(--a);font-weight:700}
 .cp{display:flex;gap:8px}.cp input[type=color]{flex:0 0 56px}.cp input:not([type=color]){flex:1}
-.tn{border:0!important;text-decoration:none!important;padding:0}
+.tn{border:0!important;text-decoration:none!important;padding:0;--px:14px;--mx:-6px;--cut:9px}
+.tn.sm{--px:7px;--mx:-3px;--cut:5px}
+.nm>.tn,.ugs b>.tn{font:inherit}
 .pk3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pk3 small{display:block;margin-bottom:3px;font-size:calc(11px*var(--fsb,1))}
 .hl{background:color-mix(in srgb,var(--a) 14%,transparent);font-weight:800;padding:2px 4px;border-radius:4px}
 
@@ -237,3 +240,9 @@ button.x.pri{background:var(--a);color:var(--ac);border-color:var(--a)}
 .ubuy{display:flex;align-items:center;gap:8px;margin:8px 0}.ubuy span{flex:1}.ubuy input{width:70px}.ubuy .bt{margin:0;width:auto;padding:8px 16px}
 .ups{width:100%;margin:0 0 12px}
 @media(max-width:420px){.uwal{grid-template-columns:repeat(2,1fr)}}
+
+/* team-name plates: a team colour that would melt into its surface (white or yellow on the light theme, near-black on the dark one)
+   puts the name on a slanted livery plate (the team's second colour, or ink / paper) instead of using a shadow or an outline.
+   The light-theme tables and race cards are dark, so they follow the dark-theme rules. */
+.tn.pl-d,html[data-theme=light] .sc .tn.pl-d,html[data-theme=light] a.cd[href^="#/r/"] .tn.pl-d,html[data-theme=light] .tn.pl-l{display:inline-block;padding:1px var(--px);margin:0 var(--mx);background:var(--pb);clip-path:polygon(var(--cut) 0,100% 0,calc(100% - var(--cut)) 100%,0 100%)}
+html[data-theme=light] .tn.pl-d,html[data-theme=light] .sc .tn.pl-l,html[data-theme=light] a.cd[href^="#/r/"] .tn.pl-l{display:inline;padding:0;margin:0;background:none;clip-path:none}
