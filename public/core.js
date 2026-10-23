@@ -34,9 +34,7 @@ const regTxt=e=>!isOpen(e)?'Registration Closed':isFull(e)?'Registration Full':'
 /* team-name plate (see style.css): returns a span coloured c; when c would vanish into the page it also gets a livery plate */
 const relL=h=>{const m=/^#?([0-9a-f]{6})$/i.exec(h||'');if(!m)return .2;const n=parseInt(m[1],16);return[n>>16,n>>8&255,n&255].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}).reduce((a,v,i)=>a+v*[.2126,.7152,.0722][i],0)};
 const crat=(a,b)=>{const x=relL(a),y=relL(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
-function tnm(n,c,c2,cls){c=hx(c)||'#8b93a7';c2=hx(c2);const L=(parseInt(c.slice(1,3),16)*.299+parseInt(c.slice(3,5),16)*.587+parseInt(c.slice(5,7),16)*.114)/255;let k='',pb='';
-if(L>.72){k=' pl-l';pb=c2&&crat(c,c2)>=3.2?c2:'#14161d'}else if(L<.2){k=' pl-d';pb=c2&&crat(c,c2)>=3.2?c2:'#f2f4f8'}
-return`<span class="tn${cls?' '+cls:''}${k}" style="color:${c}${pb?';--pb:'+pb:''}">${esc(n)}</span>`}
+function tnm(n,c,c2,cls){c=hx(c)||'#8b93a7';c2=hx(c2);return`<span class="tn${cls?' '+cls:''}" style="color:${c};--c2:${c2||'transparent'}">${esc(n)}</span>`}
 const tmO=(e,d)=>evT(e).find(t=>t.d.slice(0,2).includes(d))||evT(e).find(t=>t.d.includes(d))||{},txT=t=>(t&&(t.tx||t.col))||'#8b93a7',txD=(t,d)=>txT(t),tc=(e,d)=>txD(tmO(e,d),d),noOf=(e,d)=>(tmO(e,d).num||{})[d]||'-';
 const get=(r,s)=>s[0]=='q'?r.q[+s[1]]:r[s];
 const lastQi=r=>{for(let i=2;i>=0;i--)if(r.q[i]&&r.q[i].length)return i;return -1};/* lap time format: m.ss,hh (example 1.23,45). Older saved times like 1:23.456 are converted on display. */
