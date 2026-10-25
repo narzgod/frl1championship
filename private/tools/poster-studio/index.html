@@ -267,16 +267,19 @@ const userFont=f=>loadF(f.v,`url(${f.d})`).then(draw);
 let FMSG='';
 const b64=buf=>{let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)};
 const fontOk=buf=>{const u=new Uint8Array(buf.slice(0,4)),t=String.fromCharCode(u[0],u[1],u[2],u[3]);return(u[0]==0&&u[1]==1&&u[2]==0&&u[3]==0)||t=='OTTO'||t=='true'||t=='wOFF'||t=='wOF2'};
-function addFont(f){const nm=f.name.replace(/\.\w+$/,''),r=new FileReader();
+let FUPB=null;
+const fup=document.createElement('input');fup.type='file';fup.hidden=true;document.body.appendChild(fup);
+fup.addEventListener('change',()=>{const f=fup.files&&fup.files[0],t=FUPB;fup.value='';FUPB=null;if(f)addFont(f,t)});
+function addFont(f,tgt){const nm=f.name.replace(/\.\w+$/,''),r=new FileReader();
  r.onerror=()=>{FMSG='File font tidak bisa dibaca.';ui()};
  r.onload=()=>{if(!fontOk(r.result)){FMSG='Bukan file font yang didukung. Pilih file .ttf, .otf, .woff atau .woff2.';ui();return}
   const o={v:'U'+uid(),l:nm,d:'data:font/ttf;base64,'+b64(r.result)};
   new FontFace(o.v,`url(${o.d})`).load().then(ff=>{document.fonts.add(ff);FST[o.v]=1;S.fonts.push(o);const X=Q();
-   if(S.tpl=='pole'){['head','name','sub'].forEach(k=>{const z=X.pt[k];if(z&&z.f!==undefined){z.f=o.v;if(z.f2!==undefined)z.f2=o.v}})}else{X.txt.nf=o.v;X.txt.hf=o.v;X.txt.sf=o.v}
-   FMSG='Font "'+nm+'" ditambahkan dan dipakai di teks poster. Kamu bisa menggantinya per bagian di pilihan font.';save();draw();ui()})
+   if(tgt){setB(tgt,o.v)}else if(S.tpl=='pole'){['head','name','sub'].forEach(k=>{const z=X.pt[k];if(z&&z.f!==undefined){z.f=o.v;if(z.f2!==undefined)z.f2=o.v}})}else{X.txt.nf=o.v;X.txt.hf=o.v;X.txt.sf=o.v}
+   FMSG='Font "'+nm+'" ditambahkan dan dipakai'+(tgt?'.':' di teks poster. Kamu bisa menggantinya per bagian di pilihan font.');save();draw();ui()})
   .catch(()=>{FMSG='Font ini tidak bisa dipakai oleh browser. Coba file font lain.';ui()})};
  r.readAsArrayBuffer(f)}
-const FL=()=>[...BUILTIN.map(b=>[b[0],b[1]]),['Impact','Impact'],['Arial Black','Arial Black'],['Georgia','Georgia'],['Courier New','Courier New'],...S.fonts.map(f=>[f.v,f.l])];
+const FL=()=>[...BUILTIN.map(b=>[b[0],b[1]]),['Impact','Impact'],['Arial Black','Arial Black'],['Georgia','Georgia'],['Courier New','Courier New'],...S.fonts.map(f=>[f.v,f.l]),['__up__','+ Upload font sendiri...']];
 function pic(file,max,cb){const u=URL.createObjectURL(file),i=new Image();i.onload=()=>{const r=Math.min(1,max/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*r);c.height=Math.round(i.height*r);c.getContext('2d').drawImage(i,0,0,c.width,c.height);cb(c.toDataURL('image/png'),c.width,c.height);URL.revokeObjectURL(u)};i.src=u}
 // ---- antarmuka ----
 const tabs=['Poster','Teks','Latar','Driver','Tim','Logo'];
@@ -402,6 +405,7 @@ function assign(el,v){const d=el.dataset;
  if(d.ci!==undefined)S.teams.find(a=>a.id==d.id).colors[d.ci]=v}
 function onVal(e){
  const el=e.target,d=el.dataset;let v=el.value;
+ if(v=='__up__'&&d.b&&el.tagName=='SELECT'){FUPB=d.b;const o=[...el.options].find(x=>x.defaultSelected);el.value=o?o.value:el.options[0].value;fup.click();return}
  if(!(d.b||d.l||d.ci!==undefined||d.pose!==undefined))return;
  if(el.type=='color'||d.hx!==undefined){const n=nh(v);
   if(!n){if(e.type=='change'){el.value=el.parentElement.querySelector('input[type=color]').value;el.classList.remove('bad')}else el.classList.add('bad');return}

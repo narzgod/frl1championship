@@ -326,7 +326,7 @@ let FMSG='';const EXTRA=[];
 const b64=buf=>{let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)};
 const fontOk=buf=>{const u=new Uint8Array(buf.slice(0,4)),t=String.fromCharCode(u[0],u[1],u[2],u[3]);return(u[0]==0&&u[1]==1&&u[2]==0&&u[3]==0)||t=='OTTO'||t=='true'||t=='wOFF'||t=='wOF2'};
 const loadUF=f=>new FontFace(f.n,`url(${f.d})`).load().then(ff=>{document.fonts.add(ff);if(!EXTRA.includes(f.n))EXTRA.push(f.n)});
-const fontList=()=>[['MotoGP Display','MotoGP Display'],['MotoGP Text','MotoGP Text'],['Impact','Impact'],['Arial Black','Arial Black'],['Georgia','Georgia'],['system-ui','Sans-serif sistem']].concat(EXTRA.map(n=>[n,n]));
+const fontList=()=>[['MotoGP Display','MotoGP Display'],['MotoGP Text','MotoGP Text'],['Impact','Impact'],['Arial Black','Arial Black'],['Georgia','Georgia'],['system-ui','Sans-serif sistem']].concat(EXTRA.map(n=>[n,n]),[['__up__','+ Upload font sendiri...']]);
 function render(){$('#tabs').innerHTML=TABS.map((n,i)=>`<button class="${i==tab?'on':''}" data-tab="${i}">${n}</button>`).join('');
  $('#panels').innerHTML=`<div class="p on">${[panelJenis,panelIsi,panelData,panelLogo,panelLatar,panelGaya][tab]()}</div>`}
 function setType(t){Z.type=t;Z.cn=0;applyDef()}
@@ -372,20 +372,25 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
  else if(d.delsp!==undefined){const L=SPL(),q=L[+d.delsp];if(q){dropImg('sp:'+q.id);L.splice(+d.delsp,1);save();render();redraw()}}
  else if(d.save){DRAG=null;draw();cv.toBlob(bl=>{const a=document.createElement('a'),f=d.save;a.href=URL.createObjectURL(bl);a.download='poster-'+Z.type+'-'+(Z.cn+1)+'.'+f;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2500)},d.save=='png'?'image/png':'image/jpeg',.95)}});
 document.addEventListener('input',e=>{const t=e.target,d=t.dataset;
+ if(d.k&&t.tagName=='SELECT'&&t.value=='__up__'){FUPK=d.k;const o=[...t.options].find(x=>x.defaultSelected);t.value=o?o.value:t.options[0].value;fup.click();return}
  if(d.k){const k=d.k;Z[k]=t.type=='checkbox'?t.checked:t.type=='range'?parseFloat(t.value):t.value;if(k=='tmcMain'){Z.tmc.main=t.value}save();redraw()}
  else if(d.pp){sp2(P,d.pp,t.type=='range'?parseFloat(t.value):t.value);save();redraw()}
  else if(d.zp){sp2(Z,d.zp,parseFloat(t.value));save();redraw()}
  else if(d.gpen!==undefined){Z.grid[+d.gpen].pen=t.value;save();redraw()}
  else if(d.tc){Z.tmc[d.tc]=t.value;save();redraw()}});
 const defer=()=>setTimeout(()=>{render();redraw()},0);
+/* upload a font: from the button, or from the last entry of a font list (then only that text uses it) */
+let FUPK=null;const fup=document.createElement('input');fup.type='file';fup.hidden=true;document.body.appendChild(fup);
+fup.addEventListener('change',()=>{const f=fup.files&&fup.files[0],t=FUPK;fup.value='';FUPK=null;if(f)addFontFile(f,t)});
+function addFontFile(f,tgt){const nm=f.name.replace(/\.[^.]+$/,'').replace(/[^\w\- ]/g,'').trim()||'Font '+((P.fonts||[]).length+1),r=new FileReader();
+ r.onerror=()=>{FMSG='File font tidak bisa dibaca.';defer()};
+ r.onload=()=>{if(!fontOk(r.result)){FMSG='Bukan file font yang didukung. Pilih file .ttf, .otf, .woff atau .woff2.';defer();return}
+  const o={n:nm,d:'data:font/ttf;base64,'+b64(r.result)};
+  loadUF(o).then(()=>{P.fonts=(P.fonts||[]).filter(x=>x.n!=nm);P.fonts.push(o);Z[tgt||'fd']=nm;save();FMSG='Font "'+nm+'" ditambahkan dan dipakai'+(tgt?'.':' untuk judul. Pilih juga di "Font teks" kalau ingin dipakai untuk teks.');defer()}).catch(()=>{FMSG='Font ini tidak bisa dipakai oleh browser. Coba file font lain.';defer()})};
+ r.readAsArrayBuffer(f)}
 document.addEventListener('change',e=>{const t=e.target,d=t.dataset;
  if(d.img&&t.files&&t.files[0]){const k=d.img;packImg(t.files[0],dsz(k)).then(u=>{if(!u)return;P.img[k]=u;return imgFrom(k,u)}).then(()=>{save();defer()})}
- else if(d.font&&t.files&&t.files[0]){const f=t.files[0];t.value='';const nm=f.name.replace(/\.[^.]+$/,'').replace(/[^\w\- ]/g,'').trim()||'Font '+((P.fonts||[]).length+1),r=new FileReader();
-  r.onerror=()=>{FMSG='File font tidak bisa dibaca.';defer()};
-  r.onload=()=>{if(!fontOk(r.result)){FMSG='Bukan file font yang didukung. Pilih file .ttf, .otf, .woff atau .woff2.';defer();return}
-   const o={n:nm,d:'data:font/ttf;base64,'+b64(r.result)};
-   loadUF(o).then(()=>{P.fonts=(P.fonts||[]).filter(x=>x.n!=nm);P.fonts.push(o);Z.fd=nm;save();FMSG='Font "'+nm+'" ditambahkan dan dipakai untuk judul. Pilih juga di "Font teks" kalau ingin dipakai untuk teks.';defer()}).catch(()=>{FMSG='Font ini tidak bisa dipakai oleh browser. Coba file font lain.';defer()})};
-  r.readAsArrayBuffer(f)}
+ else if(d.font&&t.files&&t.files[0]){const f=t.files[0];t.value='';addFontFile(f,null)}
  else if(d.k&&(d.r||d.bgsel)){const k=d.k;Z[k]=t.value;if(d.bgsel){const x=BGDEF[Z.bgk];Z.bg1=x[0];Z.bg2=x[1]}save();defer()}
  else if(d.drv){pickDriver(t.value);save();defer()}
  else if(d.gd!==undefined){Z.grid[+d.gd].d=t.value;save();redraw()}
