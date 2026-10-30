@@ -6,7 +6,7 @@ const THKEY='frl-theme',getTheme=()=>{try{return localStorage.getItem(THKEY)==='
 function setTheme(t,sv){if(ADMIN)return;document.documentElement.dataset.theme=t;if(sv){try{localStorage.setItem(THKEY,t)}catch(e){}}const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t=='light'?'#f3f4f7':'#0c0d12';document.querySelectorAll('.thb button').forEach(b=>b.classList.toggle('on',b.dataset.t==t))}
 setTheme(getTheme());
 const loc=()=>{try{localStorage.setItem('f1c-mm',JSON.stringify(S));localStorage.setItem('f1c-hub',JSON.stringify(hub()))}catch(e){}};
-const save=()=>{loc();if(ADMIN&&SYNC=='cloud'){clearTimeout(pushT);pushT=setTimeout(doPush,300)}};
+const save=()=>{if(ADMIN)linkPd();loc();if(ADMIN&&SYNC=='cloud'){clearTimeout(pushT);pushT=setTimeout(doPush,300)}};
 async function doPush(){try{const r=await fetch('/api/state',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({s:S,base:BASE})});
 if(r.status==401)return say('Session expired. Open the owner menu again and enter the code.');if(!r.ok)return say('Could not save to the shared database. Try again.');
 const j=await r.json();BASE=j.ts;if(j.merged){S=j.s;loc();if(typeof render=='function')render()}}catch(e){say('No connection. Changes are saved only in this browser for now.')}}
@@ -154,32 +154,44 @@ async function sendReg(kind,item){try{const r=await fetch('/api/register',{metho
 async function addLicP(n,d,w){await READY;const c=chkLic(n,d,w);if(c.err)return c.err;
 if(SYNC!='cloud'){S.dr.push(c.item);save();return''}const e=await sendReg('driver',c.item);await load();return e}
 let TF=null;
-function teamForm(e,t){TF={e,t:t||null,prev:{},dflt:{}};const x=t||{},V=k=>esc(x[k]||'');
-return`<div class=f><label>Team name</label><input id=tn value="${V('name')}">${e.soc?`<label>Team social account</label><input id=ts value="${V('soc')}">`:''}<label>Team Principal name</label><input id=tp value="${V('tp')}"><label>Team Principal WhatsApp</label><input id=tpw inputmode=tel placeholder="0812-3456-7890" value="${V('tpw')}"><label>Team Owner name</label><input id=ow value="${V('ow')}"><label>Team Owner WhatsApp</label><input id=oww inputmode=tel placeholder="0812-3456-7890" value="${V('oww')}">${colorField('tcl','Main Color',x.col||'#e10600')}${colorField('tcl2','Second Color',x.col2||'#ffffff')}${ADMIN?colorField('ttx','Team & driver text color',x.tx||x.col||'#e10600'):''}${SL.map(([id,l])=>`<label>${l}${id[0]=='r'?' (optional)':''}</label><div class=pk><input id=q_${id} placeholder="Search name or DID" oninput=pfAll()><div class=sg id=sg_${id}></div><select id=${id} onchange=pfAll()></select><input id=n_${id} inputmode=numeric maxlength=2 placeholder="Race number (1-99) - required" hidden></div>`).join('')}</div>`}
+const normNm=n=>String(n||'').replace(/\s+/g,' ').trim().toLowerCase();
+/* a driver a team entered by name (not licensed yet) is linked to the license as soon as one with the same name exists */
+function linkPd(){let c=0;S.tm.forEach(t=>{if(!t.pd)return;t.pd.forEach((p,i)=>{if(!p)return;const m=S.dr.filter(x=>normNm(x.name)==normNm(p.n));if(m.length!=1)return;const did=m[0].did;if(t.d.includes(did))return;if(i<2&&S.tm.some(o=>o!==t&&o.ev==t.ev&&o.d.slice(0,2).includes(did)))return;t.d[i]=did;t.num=t.num||{};if(p.num)t.num[did]=p.num;t.pd[i]=null;c++});if(!t.pd.some(Boolean))delete t.pd});return c}
+function togPd(id){TF.pm[id]=!TF.pm[id];if(TF.pm[id]){$('#'+id).value='';$('#q_'+id).value=''}else{$('#pn_'+id).value='';$('#pw_'+id).value='';$('#pb_'+id).innerHTML=''}pfAll()}
+function pdIn(id){const m=S.dr.filter(d=>normNm(d.name)==normNm($('#pn_'+id).value)),b=$('#pb_'+id);b.innerHTML=m.length==1?'&#10003; This driver is already licensed (DID '+m[0].did+'). It will be used automatically.':m.length>1?'Several licensed drivers share this name. Pick the driver from the list.':''}
+function pdAuto(id){const m=S.dr.filter(d=>normNm(d.name)==normNm($('#pn_'+id).value));if(m.length!=1)return;const did=m[0].did;if(![...$('#'+id).options].some(o=>o.value==did)){$('#pb_'+id).innerHTML='This licensed driver is not available here (already used in this form or as a regular driver in another team).';return}TF.pm[id]=false;$('#pn_'+id).value='';$('#pw_'+id).value='';pickD(id,did)}
+function teamForm(e,t){TF={e,t:t||null,prev:{},dflt:{},pm:{}};const x=t||{},V=k=>esc(x[k]||'');
+return`<div class=f><label>Team name</label><input id=tn value="${V('name')}">${e.soc?`<label>Team social account</label><input id=ts value="${V('soc')}">`:''}<label>Team Principal name</label><input id=tp value="${V('tp')}"><label>Team Principal WhatsApp</label><input id=tpw inputmode=tel placeholder="0812-3456-7890" value="${V('tpw')}"><label>Team Owner name</label><input id=ow value="${V('ow')}"><label>Team Owner WhatsApp</label><input id=oww inputmode=tel placeholder="0812-3456-7890" value="${V('oww')}">${colorField('tcl','Main Color',x.col||'#e10600')}${colorField('tcl2','Second Color',x.col2||'#ffffff')}${ADMIN?colorField('ttx','Team & driver text color',x.tx||x.col||'#e10600'):''}${SL.map(([id,l])=>`<label>${l}${id[0]=='r'?' (optional)':''}</label><div class=pk><div id=ls_${id} class=pk><input id=q_${id} placeholder="Search name or DID" oninput=pfAll()><div class=sg id=sg_${id}></div><select id=${id} onchange=pfAll()></select><div class="m dlb" id=lb_${id}></div></div><div id=pdw_${id} class=pk hidden><input id=pn_${id} placeholder="Driver name (2 to 3 words)" autocomplete=off oninput="pdIn('${id}')" onchange="pdAuto('${id}')"><input id=pw_${id} inputmode=tel placeholder="Driver WhatsApp, e.g. 0812-3456-7890"><div class="m dlb" id=pb_${id}>Not licensed yet. The driver is linked automatically when a license with this exact name is registered.</div></div><input id=n_${id} inputmode=numeric maxlength=2 placeholder="Race number (1-99) - required" hidden><button type=button class=lnk id=tg_${id} onclick="togPd('${id}')">Driver not licensed yet? Add by name</button></div>`).join('')}</div>`}
 function pickD(id,did){$('#'+id).value=did;$('#q_'+id).value='';pfAll()}
-function pfAll(init){const e=TF.e,cur={};SL.forEach(([id],i)=>{const s=$('#'+id);cur[id]=init?((TF.t&&TF.t.d[i])||''):(s?s.value:'')});
+function pfAll(init){const e=TF.e,cur={};SL.forEach(([id],i)=>{const s=$('#'+id);cur[id]=init?((TF.t&&TF.t.d[i])||''):(s?s.value:'');if(init&&TF.t&&TF.t.pd&&TF.t.pd[i]){const p=TF.t.pd[i];TF.pm[id]=true;$('#pn_'+id).value=p.n||'';$('#pw_'+id).value=p.wa||''}});
 const taken=new Set(S.tm.filter(t=>t.ev==e.id&&(!TF.t||t.id!=TF.t.id)).flatMap(t=>t.d.slice(0,2)));
-SL.forEach(([id])=>{const q=($('#q_'+id).value||'').trim().toLowerCase(),used=new Set(SL.filter(([k])=>k!=id).map(([k])=>cur[k]).filter(Boolean));
+SL.forEach(([id],ix)=>{const q=($('#q_'+id).value||'').trim().toLowerCase(),used=new Set(SL.filter(([k])=>k!=id).map(([k])=>cur[k]).filter(Boolean));
 const L=S.dr.filter(d=>d.did==cur[id]||(!taken.has(d.did)&&!used.has(d.did)&&(!q||d.name.toLowerCase().includes(q)||d.did.includes(q))));
 if(!cur[id]&&/^\d{4}$/.test(q)&&L.length==1)cur[id]=L[0].did;
 $('#'+id).innerHTML=opt([['','Select driver']].concat(L.map(d=>[d.did,nmLabel(d)])),cur[id]);
 const sg=$('#sg_'+id);if(sg)sg.innerHTML=(q&&!cur[id])?(L.length?L.slice(0,6).map(d=>`<button type=button class=sgb onclick="pickD('${id}','${d.did}')">${esc(nmLabel(d))}${ADMIN?' <span class=m>'+d.did+'</span>':''}</button>`).join(''):'<span class=m>No driver found</span>'):'';
-const n=$('#n_'+id);n.hidden=!cur[id];if(TF.prev[id]!==cur[id]){n.value=(init&&cur[id]&&TF.t&&TF.t.num&&TF.t.num[cur[id]])||'';TF.prev[id]=cur[id]}})}
+const n=$('#n_'+id),pm=!!TF.pm[id];n.hidden=!(cur[id]||pm);if(TF.prev[id]!==cur[id]){n.value=(init&&cur[id]&&TF.t&&TF.t.num&&TF.t.num[cur[id]])||'';TF.prev[id]=cur[id]}if(init&&pm&&TF.t&&TF.t.pd&&TF.t.pd[ix])n.value=TF.t.pd[ix].num||'';$('#ls_'+id).hidden=pm;$('#pdw_'+id).hidden=!pm;$('#tg_'+id).textContent=pm?'Back to licensed driver list':'Driver not licensed yet? Add by name';$('#lb_'+id).innerHTML=cur[id]&&!pm?'&#10003; Licensed driver &middot; DID '+cur[id]:''})}
 function saveTeam(admin){const e=TF.e,old=TF.t,v=i=>($('#'+i)||{value:''}).value.trim(),d=SL.map(([id])=>$('#'+id).value),num={},er=m=>{say(m);return false};
 if(!v('tn')||!v('tp')||!v('ow'))return er('Fill in team name, Team Principal and Team Owner.');
 const w1=normWA(v('tpw')),w2=normWA(v('oww'));if(!w1||!w2)return er('Enter valid WhatsApp numbers for Team Principal and Team Owner.');
 const c1=colorVal('tcl'),c2=colorVal('tcl2');if(!c1||!c2)return er('Enter valid hex colors, e.g. #E10600.');
 let tx='';if(admin){tx=colorVal('ttx');if(!tx)return er('Enter a valid team text color, e.g. #FFFFFF.');if(tx===c1)tx=''}
-if(!d[0]||!d[1])return er('Driver 1 and Driver 2 are required.');
+const others=S.tm.filter(t=>t.ev==e.id&&(!old||t.id!=old.id)),pd=[null,null,null,null];
+for(const [id,l] of SL){const i=SL.findIndex(z=>z[0]==id);if(!TF.pm[id])continue;const n=$('#pn_'+id).value.trim().replace(/\s+/g,' ');if(!n)continue;
+const w=normWA($('#pw_'+id).value),k=n.split(' ').length;if(k<2||k>3)return er(l+': driver name must be 2 to 3 words.');if(!w)return er(l+': enter a valid WhatsApp number for the driver.');
+const m=S.dr.filter(x=>normNm(x.name)==normNm(n));if(m.length>1)return er(l+': several licensed drivers share this name. Pick the driver from the list instead.');
+if(m.length==1)d[i]=m[0].did;else pd[i]={n,wa:w}}
+if(!(d[0]||pd[0])||!(d[1]||pd[1]))return er('Driver 1 and Driver 2 are required.');
 const f=d.filter(Boolean);if(new Set(f).size<f.length)return er('A driver cannot be selected twice.');
-const others=S.tm.filter(t=>t.ev==e.id&&(!old||t.id!=old.id));
+const pn=pd.filter(Boolean).map(p=>normNm(p.n));if(new Set(pn).size<pn.length)return er('A driver cannot be entered twice.');
 if(f.some(x=>others.some(t=>t.d.slice(0,2).includes(x))))return er('Some drivers are already a regular driver in another team.');
+if(pd.slice(0,2).some(p=>p&&others.some(t=>(t.pd||[]).slice(0,2).some(q=>q&&normNm(q.n)==normNm(p.n)))))return er('A driver you entered is already a regular driver in another team.');
 if(others.some(t=>t.name.toLowerCase()==v('tn').toLowerCase()))return er('Team name is already taken.');
-const usedBy=(dd)=>new Set(others.flatMap(t=>Object.entries(t.num||{}).filter(([k])=>k!=dd).map(([k,v])=>v)));const mine=new Set();
-for(const [id,l] of SL){const dd=$('#'+id).value,val=$('#n_'+id).value.trim();if(!dd)continue;
-if(!/^\d{1,2}$/.test(val)||+val<1)return er('Race number (1-99) is required for '+l+'.');if(usedBy(dd).has(String(+val))||mine.has(String(+val)))return er('Race number '+(+val)+' is already taken.');mine.add(String(+val));num[dd]=String(+val)}
+const usedBy=(dd)=>new Set(others.flatMap(t=>[...Object.entries(t.num||{}).filter(([k])=>k!=dd).map(([k,v])=>v),...(t.pd||[]).filter(Boolean).map(p=>p.num).filter(Boolean)]));const mine=new Set();
+for(const [id,l] of SL){const i=SL.findIndex(z=>z[0]==id),dd=d[i],val=$('#n_'+id).value.trim();if(!dd&&!pd[i])continue;
+if(!/^\d{1,2}$/.test(val)||+val<1)return er('Race number (1-99) is required for '+l+'.');if(usedBy(dd).has(String(+val))||mine.has(String(+val)))return er('Race number '+(+val)+' is already taken.');mine.add(String(+val));if(dd)num[dd]=String(+val);else pd[i].num=String(+val)}
 if(!admin){if(!isOpen(e))return er('Registration is closed.');if(!old&&isFull(e))return er('Team slots are full.')}
-const o={id:old?old.id:uid(),ev:e.id,name:v('tn'),soc:v('ts'),tp:v('tp'),tpw:w1,ow:v('ow'),oww:w2,col:c1,col2:c2,d,num};if(admin){o.tx=tx;delete o.dtx;if(old)delete old.dtx}
+const o={id:old?old.id:uid(),ev:e.id,name:v('tn'),soc:v('ts'),tp:v('tp'),tpw:w1,ow:v('ow'),oww:w2,col:c1,col2:c2,d,num,pd:pd.some(Boolean)?pd:undefined};if(admin){o.tx=tx;delete o.dtx;if(old)delete old.dtx}
 if(!admin&&!old&&SYNC=='cloud')return sendReg('team',o).then(async m=>{await load();if(m){say(m);return false}return true});
 if(old)Object.assign(old,o);else S.tm.push(o);save();return true}
 

@@ -241,3 +241,6 @@ button.x.pri{background:var(--a);color:var(--ac);border-color:var(--a)}
 @media(max-width:420px){.uwal{grid-template-columns:repeat(2,1fr)}}
 /* Upgrades tab: team cards use the same black gradient as the race cards and tables, in both themes */
 .ugt{--t:#f2f4f8;--m:#a4acbd;--s1:#0c0d12;--s2:#171a22;--ln:#2a2e3a;color:var(--t);border-color:#2a2e3a;background:linear-gradient(135deg,#000 0%,#ffffff33 33%,#000 66%,#ffffff33 100%),#0c0d12}
+
+.lnk{justify-self:start;background:none;border:0;padding:4px 0;color:var(--a);font-family:var(--f-ui);font-weight:700;font-size:calc(13px*var(--fsb,1));cursor:pointer;text-decoration:underline}
+.dlb:empty{display:none}.dlb{font-size:calc(12.5px*var(--fsb,1));line-height:1.5}

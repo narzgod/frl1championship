@@ -28,5 +28,8 @@ const sum = t => { const u = (t && t.up) || {}, l = Array.isArray(u.led) ? u.led
 const strip = s => { const o = JSON.parse(JSON.stringify(norm(s))); o.dr.forEach(d => delete d.wa);
   /* upgrades are locked: the public state only says whether the system is on. Everything else (engine, levels, wallet, sponsors, prices) is returned by /api/upgrade after the team password. */
   o.ev.forEach(e => { if (e.up) e.up = { on: !!e.up.on, v: e.up.v }; });
-  o.tm.forEach(t => { delete t.tpw; delete t.oww; delete t.up; }); return o; };
-module.exports = { hasDb, getState, putState, authed, body, norm, strip, sum, cmd, eq };
+  o.tm.forEach(t => { delete t.tpw; delete t.oww; delete t.up; (t.pd || []).forEach(p => { if (p) delete p.wa; }); }); return o; };
+const nm = v => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
+/* a driver a team entered by name is linked to the license as soon as one with the same name exists */
+const linkPd = s => { s.tm.forEach(t => { if (!Array.isArray(t.pd)) return; t.pd.forEach((p, i) => { if (!p) return; const m = s.dr.filter(x => nm(x.name) == nm(p.n)); if (m.length != 1) return; const did = m[0].did; if (t.d.includes(did)) return; if (i < 2 && s.tm.some(o => o !== t && o.ev == t.ev && o.d.slice(0, 2).includes(did))) return; t.d[i] = did; t.num = t.num || {}; if (p.num) t.num[did] = p.num; t.pd[i] = null; }); if (!t.pd.some(Boolean)) delete t.pd; }); };
+module.exports = { hasDb, getState, putState, authed, body, norm, strip, sum, cmd, eq, nm, linkPd };
