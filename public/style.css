@@ -244,3 +244,6 @@ button.x.pri{background:var(--a);color:var(--ac);border-color:var(--a)}
 
 .lnk{justify-self:start;background:none;border:0;padding:4px 0;color:var(--a);font-family:var(--f-ui);font-weight:700;font-size:calc(13px*var(--fsb,1));cursor:pointer;text-decoration:underline}
 .dlb:empty{display:none}.dlb{font-size:calc(12.5px*var(--fsb,1));line-height:1.5}
+
+[hidden]{display:none!important}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.seg button{border:1px solid var(--ln);background:var(--s2);color:var(--m);border-radius:12px;padding:11px 8px;font-family:var(--f-ui);font-weight:700;font-size:calc(13px*var(--fsb,1));cursor:pointer}.seg button.on{background:var(--a);border-color:var(--a);color:var(--ac)}

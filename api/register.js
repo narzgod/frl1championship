@@ -48,14 +48,14 @@ module.exports = async (req, res) => {
       const usedBy = dd => new Set(teams.flatMap(y => [...Object.entries(y.num || {}).filter(([k]) => k != dd).map(([k, v]) => v), ...(y.pd || []).filter(Boolean).map(p => p.num).filter(Boolean)])), mine = new Set(), num = {};
       for (const x of f) {
         const v = String((it.num && it.num[x]) || cnum[x] || '').trim();
-        if (!/^\d{1,2}$/.test(v) || +v < 1) return fail('Race number (1-99) is required for every driver.');
-        if (usedBy(x).has(String(+v)) || mine.has(String(+v))) return fail('Race number ' + (+v) + ' is already taken.');
+        if (!/^\d{1,2}$/.test(v) || +v < 1) return fail('Car Number (1-99) is required for every driver.');
+        if (usedBy(x).has(String(+v)) || mine.has(String(+v))) return fail('Car Number ' + (+v) + ' is already taken.');
         mine.add(String(+v)); num[x] = String(+v);
       }
       for (const p of pd) {
         if (!p) continue; const v = p.num;
-        if (!/^\d{1,2}$/.test(v) || +v < 1) return fail('Race number (1-99) is required for every driver.');
-        if (usedBy('').has(String(+v)) || mine.has(String(+v))) return fail('Race number ' + (+v) + ' is already taken.');
+        if (!/^\d{1,2}$/.test(v) || +v < 1) return fail('Car Number (1-99) is required for every driver.');
+        if (usedBy('').has(String(+v)) || mine.has(String(+v))) return fail('Car Number ' + (+v) + ' is already taken.');
         mine.add(String(+v)); p.num = String(+v);
       }
       s.tm.push({ id: uid(), ev: e.id, name, soc: e.soc ? t(it.soc, 80) : '', tp, tpw: w1, ow, oww: w2, col: c1, col2: c2, d, num, ...(pd.some(Boolean) ? { pd } : {}), at: now });
