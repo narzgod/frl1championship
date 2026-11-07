@@ -23,13 +23,13 @@ input[type=range]{width:100%}input[type=color]{width:100%;height:42px;border:0;b
 <main id="panel"></main><button id="dl">⬇ Unduh PNG</button><div id="ts"></div><input type="file" id="fup" accept="image/*" hidden>
 <script>
 const W=1080,H=1350,$=i=>document.getElementById(i),cv=$('cv'),cx=cv.getContext('2d');
-const DEF={name:'NAMA PEMBALAP',title:'GRAND SLAMS',badges:['POLE POSITION','100% LAPS LED','FASTEST LAP','RACE WIN'],showBadges:true,fx:true,fxi:70,seed:7,gold:'#d4a82a',bg:'#0b0a07',ph:[0,1,2,3,4,5].map(()=>({z:100,x:0,y:0,f:30}))};
+const DEF={name:'NAMA PEMBALAP',title:'GRAND SLAMS',badges:['POLE POSITION','100% LAPS LED','FASTEST LAP','RACE WIN'],showBadges:true,fx:true,fxi:70,seed:7,gold:'#d4a82a',bg:'#0b0a07',ph:[{z:100,x:0,y:0,f:25}]};
 let S;try{S=JSON.parse(localStorage.getItem('f1c-gs'))}catch(e){}
 S=Object.assign({},DEF,S||{});S.ph=DEF.ph.map((d,i)=>Object.assign({},d,(S.ph||[])[i]||{}));
 const save=()=>{try{localStorage.setItem('f1c-gs',JSON.stringify(S))}catch(e){}};
 const toast=m=>{const t=$('ts');t.textContent=m;t.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.opacity=0,1800)};
 /* photos live in the browser database (they are too big for localStorage) */
-const IMG=[null,null,null,null,null,null];
+const IMG=[null];
 const idb=()=>new Promise((ok,no)=>{const r=indexedDB.open('f1c-gs',1);r.onupgradeneeded=()=>r.result.createObjectStore('p');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 const idbSet=(k,v)=>idb().then(d=>new Promise(ok=>{const t=d.transaction('p','readwrite');v?t.objectStore('p').put(v,k):t.objectStore('p').delete(k);t.oncomplete=ok}));
 const idbGet=k=>idb().then(d=>new Promise(ok=>{const q=d.transaction('p').objectStore('p').get(k);q.onsuccess=()=>ok(q.result)}));
@@ -38,7 +38,7 @@ const toImg=b=>new Promise(ok=>{const u=URL.createObjectURL(b),i=new Image();i.o
 const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),hex=a=>'#'+a.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
 const mix=(h,t,w)=>hex(rgb(h).map(v=>v+(w-v)*t)),lite=(h,t)=>mix(h,t,255),dark=(h,t)=>mix(h,t,0);
 const rnd=s=>()=>(s=(s*16807)%2147483647)/2147483647;
-const SL=[{x:270,y:10,w:540,h:700},{x:20,y:80,w:400,h:520},{x:660,y:80,w:400,h:520},{x:-40,y:500,w:470,h:520},{x:300,y:540,w:480,h:520},{x:650,y:500,w:470,h:520}],ORDER=[1,2,0,3,5,4];
+const SL=[{x:90,y:20,w:900,h:1010}],ORDER=[0];
 let exporting=false;
 function bg(g){
   cx.fillStyle=S.bg;cx.fillRect(0,0,W,H);
@@ -66,23 +66,28 @@ function confetti(){
 }
 function photo(i){
   const s=SL[i],p=S.ph[i],im=IMG[i];
-  if(!im){if(exporting)return;cx.save();cx.strokeStyle='rgba(212,168,42,.5)';cx.setLineDash([10,8]);cx.lineWidth=3;cx.strokeRect(Math.max(8,s.x)+6,s.y+6,Math.min(s.w,W-Math.max(8,s.x))-12,s.h-12);cx.fillStyle='rgba(212,168,42,.7)';cx.font='700 34px "MotoGP Text",Arial';cx.textAlign='center';cx.fillText('FOTO '+(i+1),s.x+s.w/2,s.y+s.h/2);cx.restore();return}
+  if(!im){if(exporting)return;cx.save();cx.strokeStyle='rgba(212,168,42,.5)';cx.setLineDash([10,8]);cx.lineWidth=3;cx.strokeRect(Math.max(8,s.x)+6,s.y+6,Math.min(s.w,W-Math.max(8,s.x))-12,s.h-12);cx.fillStyle='rgba(212,168,42,.7)';cx.font='700 34px "MotoGP Text",Arial';cx.textAlign='center';cx.fillText('FOTO PEMBALAP',s.x+s.w/2,s.y+s.h/2);cx.restore();return}
   const o=document.createElement('canvas');o.width=s.w;o.height=s.h;const c=o.getContext('2d');
   const sc=Math.max(s.w/im.width,s.h/im.height)*p.z/100,dw=im.width*sc,dh=im.height*sc;
   c.drawImage(im,(s.w-dw)/2+p.x*s.w/100,(s.h-dh)/2+p.y*s.h/100,dw,dh);
   if(p.f>0){const f=Math.min(.95,p.f/100);c.save();c.globalCompositeOperation='destination-in';c.translate(s.w/2,s.h/2);c.scale(s.w/2,s.h/2);
     const m=c.createRadialGradient(0,0,Math.max(0,1-f*1.3),0,0,1.18);m.addColorStop(0,'rgba(0,0,0,1)');m.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=m;c.fillRect(-2,-2,4,4);c.restore()}
-  cx.drawImage(o,s.x,s.y);
+  cx.save();if(S.fx){cx.shadowColor=`rgba(255,190,60,${.55*S.fxi/100})`;cx.shadowBlur=70}cx.drawImage(o,s.x,s.y);cx.restore();
 }
+function leafP(L,w){cx.beginPath();cx.moveTo(0,0);cx.bezierCurveTo(L*.25,-w,L*.75,-w*.9,L,0);cx.bezierCurveTo(L*.75,w*.9,L*.25,w,0,0);cx.closePath()}
+/* wreath: two curved stems, each carrying two rows of slim pointed leaves that shrink toward the open top */
 function laurel(x,y,r){
-  const g=cx.createLinearGradient(x,y-r,x,y+r);g.addColorStop(0,lite(S.gold,.55));g.addColorStop(.5,S.gold);g.addColorStop(1,dark(S.gold,.35));
+  const g=cx.createLinearGradient(x,y-r-12,x,y+r+12);g.addColorStop(0,lite(S.gold,.6));g.addColorStop(.5,S.gold);g.addColorStop(1,dark(S.gold,.3));
   cx.save();cx.fillStyle=g;
-  for(const sd of [-1,1])for(let i=0;i<12;i++){const t=i/11,p=.35+t*2.25,px=x+sd*Math.sin(p)*r,py=y+Math.cos(p)*r,ta=Math.atan2(-Math.sin(p),sd*Math.cos(p));
-    cx.save();cx.translate(px,py);cx.rotate(ta+(i%2?.55:-.55));cx.beginPath();cx.ellipse(0,0,17-t*5,6.5-t*1.6,0,0,7);cx.fill();cx.restore()}
+  for(const sd of [-1,1]){
+    cx.beginPath();for(let i=0;i<=24;i++){const p=.1+i/24*2.6,px=x+sd*Math.sin(p)*r,py=y+Math.cos(p)*r;i?cx.lineTo(px,py):cx.moveTo(px,py)}cx.strokeStyle=g;cx.lineWidth=3;cx.stroke();
+    cx.strokeStyle=dark(S.gold,.55);cx.lineWidth=1;
+    for(let i=0;i<17;i++){const t=i/16,p=.1+t*2.5,px=x+sd*Math.sin(p)*r,py=y+Math.cos(p)*r,ta=Math.atan2(-Math.sin(p),sd*Math.cos(p)),L=25-t*9,w=6.4-t*2.2;
+      for(const [o,a] of [[1,.58],[-1,.5]]){cx.save();cx.translate(px,py);cx.rotate(ta+sd*o*a);leafP(L,w);cx.fill();cx.stroke();cx.restore()}}}
   cx.restore();
 }
 function badge(x,y,t){
-  laurel(x,y,64);const w=String(t||'').toUpperCase().split(' '),l=w.length>2?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:w;
+  laurel(x,y,54);const w=String(t||'').toUpperCase().split(' '),l=w.length>2?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:w;
   cx.save();cx.fillStyle=lite(S.gold,.35);cx.textAlign='center';cx.textBaseline='middle';cx.font='700 17px "MotoGP Text",Arial';
   l.forEach((s,i)=>cx.fillText(s,x,y+(i-(l.length-1)/2)*21));cx.restore();
 }
@@ -116,8 +121,7 @@ function panel(){
 <div class="c"><h3>Efek</h3><div class="seg"><button data-fx="1" class="${S.fx?'on':''}">Efek cahaya</button><button data-fx="0" class="${S.fx?'':'on'}">Tanpa efek</button></div>
 ${S.fx?`<label class="f"><span>Kekuatan cahaya &amp; confetti: <b id="vfxi">${S.fxi}</b>%</span><input type="range" min="0" max="100" value="${S.fxi}" data-s="fxi"></label><button data-a="seed" style="width:100%">🎲 Acak confetti</button>`:'<p class="sm" style="margin:0">Latar gelap polos tanpa cahaya emas dan confetti.</p>'}</div>
 <div class="c"><h3>Warna</h3><div class="g"><label class="f"><span>Emas (judul, lencana, confetti)</span><input type="color" data-s="gold" value="${S.gold}"></label><label class="f"><span>Latar</span><input type="color" data-s="bg" value="${S.bg}"></label></div></div>
-<div class="c"><h3>Foto</h3><p class="sm" style="margin-top:0">Pakai foto potongan (PNG transparan) untuk hasil terbaik. Foto biasa bisa dihaluskan tepinya dengan "Haluskan tepi".</p></div>`
-+S.ph.map((p,i)=>`<div class="c"><h3>Foto ${i+1}${['','',' (tengah atas)',' (kiri bawah)',' (tengah bawah)',' (kanan bawah)'][i]}</h3><div class="row"><div class="ph" id="th${i}"></div><label class="bt">Pilih foto<input type="file" accept="image/*" data-up="${i}" hidden></label><button data-a="del" data-i="${i}">Hapus</button></div>${sl(i,'z','Ukuran %',40,300)}${sl(i,'x','Geser kiri-kanan',-100,100)}${sl(i,'y','Geser atas-bawah',-100,100)}${sl(i,'f','Haluskan tepi',0,90)}</div>`).join('')
+<div class="c"><h3>Foto pembalap</h3><p class="sm" style="margin-top:0">Satu foto saja. Foto potongan (PNG transparan) paling bagus. Foto biasa bisa dihaluskan tepinya dengan "Haluskan tepi".</p><div class="row"><div class="ph" id="th0"></div><label class="bt">Pilih foto<input type="file" accept="image/*" data-up="0" hidden></label><button data-a="del" data-i="0">Hapus</button></div>${sl(0,'z','Ukuran %',40,300)}${sl(0,'x','Geser kiri-kanan',-100,100)}${sl(0,'y','Geser atas-bawah',-100,100)}${sl(0,'f','Haluskan tepi',0,90)}</div>`
 +`<div class="c"><button data-a="rst" style="width:100%">Reset semua</button></div>`;
   IMG.forEach((im,i)=>{if(im&&$('th'+i))$('th'+i).style.backgroundImage=`url(${im.src})`});
 }
@@ -133,9 +137,9 @@ P.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.fx!=null){S.fx=b.dataset.fx=='1';save();panel();redraw()}
   else if(b.dataset.a=='seed'){S.seed=Math.floor(Math.random()*99999)+1;save();redraw()}
   else if(b.dataset.a=='del'){const i=+b.dataset.i;IMG[i]=null;idbSet('p'+i,null);panel();redraw()}
-  else if(b.dataset.a=='rst'){if(!confirm('Kembalikan semua pengaturan dan hapus semua foto?'))return;localStorage.removeItem('f1c-gs');[0,1,2,3,4,5].forEach(i=>idbSet('p'+i,null));location.reload()}});
+  else if(b.dataset.a=='rst'){if(!confirm('Kembalikan semua pengaturan dan hapus semua foto?'))return;localStorage.removeItem('f1c-gs');[0].forEach(i=>idbSet('p'+i,null));location.reload()}});
 $('dl').onclick=()=>{exporting=true;draw();exporting=false;cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='grand-slam-'+((S.name||'poster').toLowerCase().replace(/[^a-z0-9]+/g,'-'))+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);draw();toast('Poster diunduh')},'image/png')};
 panel();draw();
 Promise.all(['700 20px "MotoGP Display"','400 20px "MotoGP Text"','700 20px "MotoGP Text"'].map(f=>document.fonts.load(f))).then(draw);
-Promise.all([0,1,2,3,4,5].map(i=>idbGet('p'+i).then(b=>b?toImg(b):null).catch(()=>null))).then(a=>{a.forEach((im,i)=>IMG[i]=im);panel();draw()});
+Promise.all([0].map(i=>idbGet('p'+i).then(b=>b?toImg(b):null).catch(()=>null))).then(a=>{a.forEach((im,i)=>IMG[i]=im);panel();draw()});
 </script><script src="/owner/tools/prev.js"></script></body></html>
