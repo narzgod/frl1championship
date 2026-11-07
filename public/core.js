@@ -130,6 +130,10 @@ if(e.done&&!only){const t=Object.keys(m).sort((a,b)=>m[b].p-m[a].p||m[b].w-m[a].
 /* team of a driver in one session of one round: session setting, else round setting, else the registered team */
 const tmR=(e,d,r,ses)=>{const id=(r&&ses&&r.ts&&r.ts[ses]&&r.ts[ses][d])||(r&&r.tm&&r.tm[d]),t=id&&evT(e).find(x=>x.id==id);return t||tmO(e,d)};
 const tcR=(e,d,r,ses)=>txD(tmR(e,d,r,ses),d),noR=(e,d,r,ses)=>(tmR(e,d,r,ses).num||{})[d]||noOf(e,d);
+/* a driver's points stay with the team he raced for: the team is stamped on every session result when the driver leaves a team */
+function freezeTm(e,tid,dids){S.rc.filter(r=>r.ev==e.id).forEach(r=>['q0','q1','q2','sp','fe'].forEach(ses=>dids.forEach(d=>{if((r.ts&&r.ts[ses]&&r.ts[ses][d])||(r.tm&&r.tm[d]))return;if(tmR(e,d,r,ses).id==tid){r.ts=r.ts||{};r.ts[ses]=r.ts[ses]||{};r.ts[ses][d]=tid}})))}
+/* team points split by driver: {teamId:{did:{p,w,pd,po}}} (same attribution as the team standings) */
+function tmBreak(e){const o={};S.rc.filter(r=>r.ev==e.id).forEach(r=>['q'+lastQi(r),'sp','fe'].forEach(k=>{const mr=stats(e,[r],k);Object.keys(mr).forEach(d=>{const t=tmR(e,d,r,k);if(!t.id)return;const v=mr[d];if(!v.p&&!v.w&&!v.pd&&!v.po)return;const a=((o[t.id]=o[t.id]||{})[d]=o[t.id][d]||{p:0,w:0,pd:0,po:0});a.p+=v.p;a.w+=v.w;a.pd+=v.pd;a.po+=v.po})}));return o}
 /* latest team a driver raced for (shown in driver standings) */
 const drvTm=(e,d)=>{const rs=S.rc.filter(r=>r.ev==e.id);for(let i=rs.length-1;i>=0;i--){const r=rs[i];for(const k of ['fe','sp','q2','q1','q0']){if((k[0]=='q'?r.q[+k[1]]:r[k]).some(x=>x.did==d))return tmR(e,d,r,k)}}return tmO(e,d)};
 function dItems(e,only){const m=stats(e,only);return Object.keys(m).map(d=>{const t=drvTm(e,d);return{k:d,n:dn(d),t:t.name||'-',c:t.col||'#8b93a7',c2:t.col2||'',tx:txD(t,d),tt:txT(t),v:m[d]}})}
@@ -195,7 +199,7 @@ SL.forEach(([id],i)=>{if(!$('#'+id)&&d[i]&&old&&old.num&&old.num[d[i]])num[d[i]]
 if(!admin){if(!isOpen(e))return er('Registration is closed.');if(!old&&isFull(e))return er('Team slots are full.')}
 const o={id:old?old.id:uid(),ev:e.id,name:v('tn'),soc:v('ts'),tp:v('tp'),tpw:w1,ow:v('ow'),oww:w2,col:c1,col2:c2,d,num,pd:pd.some(Boolean)?pd:undefined};if(admin){o.tx=tx;delete o.dtx;if(old)delete old.dtx}
 if(!admin&&!old&&SYNC=='cloud')return sendReg('team',o).then(async m=>{await load();if(m){say(m);return false}return true});
-if(old)Object.assign(old,o);else S.tm.push(o);save();return true}
+if(old){if(admin){const lv=old.d.filter(x=>x&&!d.includes(x));if(lv.length)freezeTm(e,old.id,lv)}Object.assign(old,o)}else S.tm.push(o);save();return true}
 
 /* tyre stock: 1 tyre per calendar race, set separately for Qualifying (q) and Race (r) */
 const calN=e=>+e.cal||10;

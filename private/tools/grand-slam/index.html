@@ -1,0 +1,141 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Grand Slam Poster</title>
+<style>
+@font-face{font-family:"MotoGP Display";src:url(/owner/tools/race-result/MotoGP_Display_Bold.ttf);font-weight:700}
+@font-face{font-family:"MotoGP Text";src:url(/owner/tools/race-result/MotoGPText-Regular.ttf);font-weight:400}
+@font-face{font-family:"MotoGP Text";src:url(/owner/tools/race-result/MotoGPText-Bold.ttf);font-weight:700}
+*{box-sizing:border-box}body{margin:0;background:#0b0b0d;color:#eee;font:15px system-ui,sans-serif}
+#top{position:sticky;top:0;z-index:5;background:#0b0b0d;border-bottom:2px solid #c9a227;text-align:center;padding:6px 0}
+#cv{height:36vh;aspect-ratio:4/5;max-width:96%;border-radius:6px}
+button,.bt{background:#26262b;color:#fff;border:0;border-radius:8px;padding:10px 12px;font:inherit;cursor:pointer;display:inline-block}
+#panel{padding:12px;max-width:640px;margin:auto;padding-bottom:90px}
+.c{background:#16161a;border-radius:10px;padding:12px;margin:0 0 10px}.c h3{margin:0 0 10px;font-size:15px;color:#e6c250}
+.f{display:block;margin:0 0 8px}.f span{display:block;font-size:12px;color:#999;margin-bottom:3px}
+input:not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]){width:100%;padding:10px;background:#1f1f24;color:#fff;border:1px solid #333;border-radius:8px;font-size:16px}
+input[type=range]{width:100%}input[type=color]{width:100%;height:42px;border:0;background:none;padding:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}.seg button{padding:12px 8px}.seg .on{background:#c9a227;color:#111;font-weight:700}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row{display:flex;gap:8px;align-items:center;margin-bottom:8px}.row .bt{flex:1;text-align:center}
+.ph{width:46px;height:46px;border-radius:6px;background:#2a2a30 center/cover no-repeat;flex:none}
+.sm{font-size:12px;color:#999}
+#dl{position:fixed;bottom:0;left:0;right:0;border-radius:0;background:#c9a227;color:#111;padding:15px;font-weight:700;z-index:9}
+#ts{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#fff;color:#000;padding:8px 14px;border-radius:20px;opacity:0;transition:.3s;z-index:9}
+</style></head><body>
+<div id="top"><canvas id="cv" width="1080" height="1350"></canvas></div>
+<main id="panel"></main><button id="dl">⬇ Unduh PNG</button><div id="ts"></div><input type="file" id="fup" accept="image/*" hidden>
+<script>
+const W=1080,H=1350,$=i=>document.getElementById(i),cv=$('cv'),cx=cv.getContext('2d');
+const DEF={name:'NAMA PEMBALAP',title:'GRAND SLAMS',badges:['POLE POSITION','100% LAPS LED','FASTEST LAP','RACE WIN'],showBadges:true,fx:true,fxi:70,seed:7,gold:'#d4a82a',bg:'#0b0a07',ph:[0,1,2,3,4,5].map(()=>({z:100,x:0,y:0,f:30}))};
+let S;try{S=JSON.parse(localStorage.getItem('f1c-gs'))}catch(e){}
+S=Object.assign({},DEF,S||{});S.ph=DEF.ph.map((d,i)=>Object.assign({},d,(S.ph||[])[i]||{}));
+const save=()=>{try{localStorage.setItem('f1c-gs',JSON.stringify(S))}catch(e){}};
+const toast=m=>{const t=$('ts');t.textContent=m;t.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.opacity=0,1800)};
+/* photos live in the browser database (they are too big for localStorage) */
+const IMG=[null,null,null,null,null,null];
+const idb=()=>new Promise((ok,no)=>{const r=indexedDB.open('f1c-gs',1);r.onupgradeneeded=()=>r.result.createObjectStore('p');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+const idbSet=(k,v)=>idb().then(d=>new Promise(ok=>{const t=d.transaction('p','readwrite');v?t.objectStore('p').put(v,k):t.objectStore('p').delete(k);t.oncomplete=ok}));
+const idbGet=k=>idb().then(d=>new Promise(ok=>{const q=d.transaction('p').objectStore('p').get(k);q.onsuccess=()=>ok(q.result)}));
+const toImg=b=>new Promise(ok=>{const u=URL.createObjectURL(b),i=new Image();i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=u});
+/* colour helpers: one gold picks the light and dark tones */
+const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),hex=a=>'#'+a.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+const mix=(h,t,w)=>hex(rgb(h).map(v=>v+(w-v)*t)),lite=(h,t)=>mix(h,t,255),dark=(h,t)=>mix(h,t,0);
+const rnd=s=>()=>(s=(s*16807)%2147483647)/2147483647;
+const SL=[{x:270,y:10,w:540,h:700},{x:20,y:80,w:400,h:520},{x:660,y:80,w:400,h:520},{x:-40,y:500,w:470,h:520},{x:300,y:540,w:480,h:520},{x:650,y:500,w:470,h:520}],ORDER=[1,2,0,3,5,4];
+let exporting=false;
+function bg(g){
+  cx.fillStyle=S.bg;cx.fillRect(0,0,W,H);
+  cx.save();cx.fillStyle='rgba(255,255,255,.035)';
+  for(let i=-3;i<9;i++){cx.beginPath();cx.moveTo(i*210,0);cx.lineTo(i*210+90,0);cx.lineTo(i*210-420,H);cx.lineTo(i*210-510,H);cx.closePath();cx.fill()}
+  cx.restore();
+  const v=cx.createLinearGradient(0,0,0,H);v.addColorStop(0,'rgba(0,0,0,.25)');v.addColorStop(.55,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.6)');cx.fillStyle=v;cx.fillRect(0,0,W,H);
+}
+function glow(){
+  const k=S.fxi/100,gl=cx.createRadialGradient(540,430,30,540,430,780);
+  gl.addColorStop(0,`rgba(255,205,70,${.62*k})`);gl.addColorStop(.35,`rgba(240,170,20,${.3*k})`);gl.addColorStop(1,'rgba(240,170,20,0)');
+  cx.fillStyle=gl;cx.fillRect(0,0,W,H);
+  cx.save();cx.globalCompositeOperation='lighter';
+  for(let i=0;i<16;i++){const a=-Math.PI/2+(i-7.5)*.17,w=.035;cx.beginPath();cx.moveTo(540,330);cx.lineTo(540+Math.cos(a-w)*1500,330+Math.sin(a-w)*1500);cx.lineTo(540+Math.cos(a+w)*1500,330+Math.sin(a+w)*1500);cx.closePath();cx.fillStyle=`rgba(255,200,80,${.05*k})`;cx.fill()}
+  cx.restore();
+}
+function confetti(){
+  const r=rnd(S.seed*977+13),k=S.fxi/100,gc=[lite(S.gold,.5),S.gold,dark(S.gold,.2),'#fff3c4'];
+  cx.save();
+  for(let i=0;i<150;i++){const x=r()*W,y=r()*H*.92,w=6+r()*16,h=4+r()*10,a=r()*Math.PI*2,al=(.35+r()*.65)*Math.min(1,.4+k);
+    cx.save();cx.translate(x,y);cx.rotate(a);cx.globalAlpha=al;cx.fillStyle=gc[Math.floor(r()*gc.length)];cx.fillRect(-w/2,-h/2,w,h);cx.restore()}
+  cx.globalCompositeOperation='lighter';
+  for(let i=0;i<46;i++){const x=r()*W,y=r()*H*.85,rad=2+r()*9,g=cx.createRadialGradient(x,y,0,x,y,rad);g.addColorStop(0,`rgba(255,220,120,${.55*k})`);g.addColorStop(1,'rgba(255,200,60,0)');cx.fillStyle=g;cx.beginPath();cx.arc(x,y,rad,0,7);cx.fill()}
+  cx.restore();
+}
+function photo(i){
+  const s=SL[i],p=S.ph[i],im=IMG[i];
+  if(!im){if(exporting)return;cx.save();cx.strokeStyle='rgba(212,168,42,.5)';cx.setLineDash([10,8]);cx.lineWidth=3;cx.strokeRect(Math.max(8,s.x)+6,s.y+6,Math.min(s.w,W-Math.max(8,s.x))-12,s.h-12);cx.fillStyle='rgba(212,168,42,.7)';cx.font='700 34px "MotoGP Text",Arial';cx.textAlign='center';cx.fillText('FOTO '+(i+1),s.x+s.w/2,s.y+s.h/2);cx.restore();return}
+  const o=document.createElement('canvas');o.width=s.w;o.height=s.h;const c=o.getContext('2d');
+  const sc=Math.max(s.w/im.width,s.h/im.height)*p.z/100,dw=im.width*sc,dh=im.height*sc;
+  c.drawImage(im,(s.w-dw)/2+p.x*s.w/100,(s.h-dh)/2+p.y*s.h/100,dw,dh);
+  if(p.f>0){const f=Math.min(.95,p.f/100);c.save();c.globalCompositeOperation='destination-in';c.translate(s.w/2,s.h/2);c.scale(s.w/2,s.h/2);
+    const m=c.createRadialGradient(0,0,Math.max(0,1-f*1.3),0,0,1.18);m.addColorStop(0,'rgba(0,0,0,1)');m.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=m;c.fillRect(-2,-2,4,4);c.restore()}
+  cx.drawImage(o,s.x,s.y);
+}
+function laurel(x,y,r){
+  const g=cx.createLinearGradient(x,y-r,x,y+r);g.addColorStop(0,lite(S.gold,.55));g.addColorStop(.5,S.gold);g.addColorStop(1,dark(S.gold,.35));
+  cx.save();cx.fillStyle=g;
+  for(const sd of [-1,1])for(let i=0;i<12;i++){const t=i/11,p=.35+t*2.25,px=x+sd*Math.sin(p)*r,py=y+Math.cos(p)*r,ta=Math.atan2(-Math.sin(p),sd*Math.cos(p));
+    cx.save();cx.translate(px,py);cx.rotate(ta+(i%2?.55:-.55));cx.beginPath();cx.ellipse(0,0,17-t*5,6.5-t*1.6,0,0,7);cx.fill();cx.restore()}
+  cx.restore();
+}
+function badge(x,y,t){
+  laurel(x,y,64);const w=String(t||'').toUpperCase().split(' '),l=w.length>2?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:w;
+  cx.save();cx.fillStyle=lite(S.gold,.35);cx.textAlign='center';cx.textBaseline='middle';cx.font='700 17px "MotoGP Text",Arial';
+  l.forEach((s,i)=>cx.fillText(s,x,y+(i-(l.length-1)/2)*21));cx.restore();
+}
+function spaced(t,x,y,px,sp){
+  const ch=[...t];let w=0;ch.forEach(c=>w+=cx.measureText(c).width+sp);w-=sp;let cur=x-w/2;
+  cx.textAlign='left';ch.forEach(c=>{cx.fillText(c,cur,y);cur+=cx.measureText(c).width+sp});
+}
+function gtitle(){
+  const t=(S.title||'').toUpperCase();if(!t)return;cx.save();cx.textBaseline='middle';
+  let fs=170;cx.font=`700 ${fs}px "MotoGP Display",Impact,sans-serif`;const mw=cx.measureText(t).width;if(mw>980){fs=Math.floor(fs*980/mw);cx.font=`700 ${fs}px "MotoGP Display",Impact,sans-serif`}
+  const y=1240,g=cx.createLinearGradient(0,y-fs/2,0,y+fs/2);g.addColorStop(0,lite(S.gold,.75));g.addColorStop(.35,lite(S.gold,.2));g.addColorStop(.55,S.gold);g.addColorStop(.8,dark(S.gold,.35));g.addColorStop(1,lite(S.gold,.3));
+  cx.textAlign='center';cx.shadowColor='rgba(0,0,0,.6)';cx.shadowBlur=18;cx.shadowOffsetY=6;cx.fillStyle=g;cx.fillText(t,540,y);cx.restore();
+}
+function draw(){
+  cx.clearRect(0,0,W,H);bg();if(S.fx)glow();
+  ORDER.forEach(photo);
+  const b=cx.createLinearGradient(0,760,0,H);b.addColorStop(0,'rgba(0,0,0,0)');b.addColorStop(.35,'rgba(6,5,3,.82)');b.addColorStop(1,'rgba(6,5,3,.96)');cx.fillStyle=b;cx.fillRect(0,760,W,H-760);
+  if(S.fx)confetti();
+  if(S.showBadges)S.badges.forEach((t,i)=>badge(270+i*180,1020,t));
+  cx.save();cx.fillStyle='#fff';cx.font='700 40px "MotoGP Text",Arial';cx.textBaseline='middle';spaced((S.name||'').toUpperCase(),540,1120,40,16);cx.restore();
+  gtitle();
+}
+let rq=0;const redraw=()=>{cancelAnimationFrame(rq);rq=requestAnimationFrame(draw)};
+/* panel */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function panel(){
+  const sl=(i,k,l,mn,mx,st)=>`<label class="f"><span>${l}: <b id="v${i}${k}">${S.ph[i][k]}</b></span><input type="range" min="${mn}" max="${mx}" step="${st||1}" value="${S.ph[i][k]}" data-p="${i}" data-k="${k}"></label>`;
+  $('panel').innerHTML=`<div class="c"><h3>Teks</h3><label class="f"><span>Nama pembalap</span><input data-s="name" value="${esc(S.name)}"></label><label class="f"><span>Judul besar</span><input data-s="title" value="${esc(S.title)}"></label>
+<div class="row"><label class="sm" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-s="showBadges" ${S.showBadges?'checked':''}> Tampilkan 4 lencana laurel</label></div>
+<div class="g">${S.badges.map((b,i)=>`<label class="f"><span>Lencana ${i+1}</span><input data-b="${i}" value="${esc(b)}"></label>`).join('')}</div></div>
+<div class="c"><h3>Efek</h3><div class="seg"><button data-fx="1" class="${S.fx?'on':''}">Efek cahaya</button><button data-fx="0" class="${S.fx?'':'on'}">Tanpa efek</button></div>
+${S.fx?`<label class="f"><span>Kekuatan cahaya &amp; confetti: <b id="vfxi">${S.fxi}</b>%</span><input type="range" min="0" max="100" value="${S.fxi}" data-s="fxi"></label><button data-a="seed" style="width:100%">🎲 Acak confetti</button>`:'<p class="sm" style="margin:0">Latar gelap polos tanpa cahaya emas dan confetti.</p>'}</div>
+<div class="c"><h3>Warna</h3><div class="g"><label class="f"><span>Emas (judul, lencana, confetti)</span><input type="color" data-s="gold" value="${S.gold}"></label><label class="f"><span>Latar</span><input type="color" data-s="bg" value="${S.bg}"></label></div></div>
+<div class="c"><h3>Foto</h3><p class="sm" style="margin-top:0">Pakai foto potongan (PNG transparan) untuk hasil terbaik. Foto biasa bisa dihaluskan tepinya dengan "Haluskan tepi".</p></div>`
++S.ph.map((p,i)=>`<div class="c"><h3>Foto ${i+1}${['','',' (tengah atas)',' (kiri bawah)',' (tengah bawah)',' (kanan bawah)'][i]}</h3><div class="row"><div class="ph" id="th${i}"></div><label class="bt">Pilih foto<input type="file" accept="image/*" data-up="${i}" hidden></label><button data-a="del" data-i="${i}">Hapus</button></div>${sl(i,'z','Ukuran %',40,300)}${sl(i,'x','Geser kiri-kanan',-100,100)}${sl(i,'y','Geser atas-bawah',-100,100)}${sl(i,'f','Haluskan tepi',0,90)}</div>`).join('')
++`<div class="c"><button data-a="rst" style="width:100%">Reset semua</button></div>`;
+  IMG.forEach((im,i)=>{if(im&&$('th'+i))$('th'+i).style.backgroundImage=`url(${im.src})`});
+}
+const P=$('panel');
+P.addEventListener('input',e=>{const t=e.target;
+  if(t.dataset.s){const k=t.dataset.s;S[k]=t.type=='checkbox'?t.checked:t.type=='range'?+t.value:t.value;if(k=='fxi'&&$('vfxi'))$('vfxi').textContent=t.value}
+  else if(t.dataset.b!=null)S.badges[+t.dataset.b]=t.value;
+  else if(t.dataset.p!=null){const i=+t.dataset.p,k=t.dataset.k;S.ph[i][k]=+t.value;$('v'+i+k).textContent=t.value}
+  save();redraw()});
+P.addEventListener('change',e=>{const t=e.target;if(t.dataset.up==null||!t.files[0])return;const i=+t.dataset.up,f=t.files[0];
+  idbSet('p'+i,f).then(()=>toImg(f)).then(im=>{IMG[i]=im;panel();redraw();toast('Foto '+(i+1)+' dipasang')})});
+P.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.fx!=null){S.fx=b.dataset.fx=='1';save();panel();redraw()}
+  else if(b.dataset.a=='seed'){S.seed=Math.floor(Math.random()*99999)+1;save();redraw()}
+  else if(b.dataset.a=='del'){const i=+b.dataset.i;IMG[i]=null;idbSet('p'+i,null);panel();redraw()}
+  else if(b.dataset.a=='rst'){if(!confirm('Kembalikan semua pengaturan dan hapus semua foto?'))return;localStorage.removeItem('f1c-gs');[0,1,2,3,4,5].forEach(i=>idbSet('p'+i,null));location.reload()}});
+$('dl').onclick=()=>{exporting=true;draw();exporting=false;cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='grand-slam-'+((S.name||'poster').toLowerCase().replace(/[^a-z0-9]+/g,'-'))+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);draw();toast('Poster diunduh')},'image/png')};
+panel();draw();
+Promise.all(['700 20px "MotoGP Display"','400 20px "MotoGP Text"','700 20px "MotoGP Text"'].map(f=>document.fonts.load(f))).then(draw);
+Promise.all([0,1,2,3,4,5].map(i=>idbGet('p'+i).then(b=>b?toImg(b):null).catch(()=>null))).then(a=>{a.forEach((im,i)=>IMG[i]=im);panel();draw()});
+</script><script src="/owner/tools/prev.js"></script></body></html>
