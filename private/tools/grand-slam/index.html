@@ -26,10 +26,12 @@ input[type=range]{width:100%}input[type=color]{width:100%;height:42px;border:0;b
 const W=1080,H=1350,$=i=>document.getElementById(i),cv=$('cv'),cx=cv.getContext('2d');
 const DEF={name:'NAMA PEMBALAP',title:'GRAND SLAMS',badges:['POLE POSITION','100% LAPS LED','FASTEST LAP','RACE WIN'],nb:4,fx:true,fxi:70,seed:7,gold:'#d4a82a',
   bgm:'flat',bg:'#0b0a07',bg2:'#1c1406',gd:'diag',gc:'#ffffff',ga:6,gs:100,gr:24,
-  tf:'MGD',nf:'MGT7',bf:'MGT7',sz:48,spos:'bottom',sp:[],ph:[{z:100,x:0,y:0,f:0}],v:3};
+  tf:'MGD',nf:'MGT7',bf:'MGT7',sz:48,spos:'bottom',sp:[],ph:[{z:100,x:0,y:0,f:0}],
+  t:{ti:{z:100,sp:0,x:0,y:0},na:{z:100,sp:16,x:0,y:0,c:'#ffffff'},bd:{z:100,gap:180,x:0,y:0}},v:4};
 let S;try{S=JSON.parse(localStorage.getItem('f1c-gs'))}catch(e){}
 S=Object.assign({},DEF,S||{});S.ph=DEF.ph.map((d,i)=>Object.assign({},d,(S.ph||[])[i]||{}));
-if(S.v!==3){S.ph=JSON.parse(JSON.stringify(DEF.ph));S.v=3;if(!Array.isArray(S.sp))S.sp=[];if(S.showBadges===false)S.nb=0}
+if(S.v!==3&&S.v!==4){S.ph=JSON.parse(JSON.stringify(DEF.ph));if(!Array.isArray(S.sp))S.sp=[];if(S.showBadges===false)S.nb=0}
+S.v=4;S.t=['ti','na','bd'].reduce((o,k)=>(o[k]=Object.assign({},DEF.t[k],(S.t||{})[k]||{}),o),{});
 if(!Array.isArray(S.sp))S.sp=[];
 const save=()=>{try{localStorage.setItem('f1c-gs',JSON.stringify(S))}catch(e){}};
 const toast=m=>{const t=$('ts');t.textContent=m;t.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.opacity=0,1800)};
@@ -117,20 +119,23 @@ function laurel(x,y,r){
       for(const [o,a] of [[1,.58],[-1,.5]]){cx.save();cx.translate(px,py);cx.rotate(ta+sd*o*a);leafP(L,w);cx.fill();cx.stroke();cx.restore()}}}
   cx.restore();
 }
-function badge(x,y,t){
+function badge(x,y,t,k){
+  cx.save();cx.translate(x,y);cx.scale(k,k);x=0;y=0;
   laurel(x,y,54);const w=String(t||'').toUpperCase().split(' '),l=w.length>2?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:w;
   cx.save();cx.fillStyle=lite(S.gold,.35);cx.textAlign='center';cx.textBaseline='middle';cx.font=fnt(S.bf,17);
-  l.forEach((s,i)=>cx.fillText(s,x,y+(i-(l.length-1)/2)*21));cx.restore();
+  l.forEach((s,i)=>cx.fillText(s,x,y+(i-(l.length-1)/2)*21));cx.restore();cx.restore();
 }
 function spaced(t,x,y,sp){
   const ch=[...t];let w=0;ch.forEach(c=>w+=cx.measureText(c).width+sp);w-=sp;let cur=x-w/2;
   cx.textAlign='left';ch.forEach(c=>{cx.fillText(c,cur,y);cur+=cx.measureText(c).width+sp});
 }
 function gtitle(y){
-  const t=(S.title||'').toUpperCase();if(!t)return;cx.save();cx.textBaseline='middle';
-  let fs=170;cx.font=fnt(S.tf,fs);const mw=cx.measureText(t).width;if(mw>980){fs=Math.floor(fs*980/mw);cx.font=fnt(S.tf,fs)}
+  const t=(S.title||'').toUpperCase(),T=S.t.ti;if(!t)return;cx.save();cx.textBaseline='middle';
+  let fs=170;cx.font=fnt(S.tf,fs);const wid=f=>{cx.font=fnt(S.tf,f);return [...t].reduce((a,c)=>a+cx.measureText(c).width,0)+T.sp*(f/170)*(t.length-1)};
+  let mw=wid(fs);if(mw>980){fs=Math.floor(fs*980/mw)}
+  fs=Math.max(8,Math.round(fs*T.z/100));const sp=T.sp*fs/170;cx.font=fnt(S.tf,fs);y+=T.y;
   const g=cx.createLinearGradient(0,y-fs/2,0,y+fs/2);g.addColorStop(0,lite(S.gold,.75));g.addColorStop(.35,lite(S.gold,.2));g.addColorStop(.55,S.gold);g.addColorStop(.8,dark(S.gold,.35));g.addColorStop(1,lite(S.gold,.3));
-  cx.textAlign='center';cx.shadowColor='rgba(0,0,0,.6)';cx.shadowBlur=18;cx.shadowOffsetY=6;cx.fillStyle=g;cx.fillText(t,540,y);cx.restore();
+  cx.shadowColor='rgba(0,0,0,.6)';cx.shadowBlur=18;cx.shadowOffsetY=6;cx.fillStyle=g;spaced(t,540+T.x,y,sp);cx.restore();
 }
 function sponsors(){
   const L=S.sp.map(s=>SPI[s.id]).filter(Boolean);if(!L.length)return 0;
@@ -145,8 +150,8 @@ function draw(){
   const b=cx.createLinearGradient(0,760,0,H);b.addColorStop(0,'rgba(0,0,0,0)');b.addColorStop(.35,'rgba(6,5,3,.82)');b.addColorStop(1,'rgba(6,5,3,.96)');cx.fillStyle=b;cx.fillRect(0,760,W,H-760);
   if(S.fx)confetti();
   const up=sponsors();
-  const n=S.nb|0;if(n>0){const x0=540-(n-1)*90;S.badges.slice(0,n).forEach((t,i)=>badge(x0+i*180,1020-up,t))}
-  cx.save();cx.fillStyle='#fff';cx.font=fnt(S.nf,40);cx.textBaseline='middle';spaced((S.name||'').toUpperCase(),540,1120-up,16);cx.restore();
+  const n=S.nb|0,B=S.t.bd,N=S.t.na;if(n>0){const x0=540+B.x-(n-1)*B.gap/2;S.badges.slice(0,n).forEach((t,i)=>badge(x0+i*B.gap,1020-up+B.y,t,B.z/100))}
+  cx.save();cx.fillStyle=N.c;cx.font=fnt(S.nf,Math.max(8,Math.round(40*N.z/100)));cx.textBaseline='middle';spaced((S.name||'').toUpperCase(),540+N.x,1120-up+N.y,N.sp*N.z/100);cx.restore();
   gtitle(1240-up);
 }
 let rq=0;const redraw=()=>{cancelAnimationFrame(rq);rq=requestAnimationFrame(draw)};
@@ -155,11 +160,17 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const fopts=v=>Object.keys(FB).map(k=>`<option value="${k}" ${v==k?'selected':''}>${FB[k][0]}</option>`).join('')+CF.map(f=>`<option value="${f.id}" ${v==f.id?'selected':''}>${esc(f.l)}</option>`).join('')+'<option value="__up__">+ Upload font sendiri...</option>';
 function panel(){
   const sl=(k,l,mn,mx,st)=>`<label class="f"><span>${l}: <b id="vp${k}">${S.ph[0][k]}</b></span><input type="range" min="${mn}" max="${mx}" step="${st||1}" value="${S.ph[0][k]}" data-p="${k}"></label>`;
+  const tr=(g,k,l,mn,mx)=>`<label class="f"><span>${l}: <b id="vt${g}${k}">${S.t[g][k]}</b></span><input type="range" min="${mn}" max="${mx}" value="${S.t[g][k]}" data-t="${g}.${k}"></label>`;
   const rg=(k,l,mn,mx)=>`<label class="f"><span>${l}: <b id="v${k}">${S[k]}</b></span><input type="range" min="${mn}" max="${mx}" value="${S[k]}" data-s="${k}"></label>`;
   $('panel').innerHTML=`<div class="c"><h3>Teks</h3><label class="f"><span>Nama pembalap</span><input data-s="name" value="${esc(S.name)}"></label><label class="f"><span>Judul besar</span><input data-s="title" value="${esc(S.title)}"></label></div>
 <div class="c"><h3>Lencana laurel</h3><div class="seg">${[[0,'Tanpa'],[3,'3 lencana'],[4,'4 lencana']].map(([n,l])=>`<button data-nb="${n}" class="${S.nb==n?'on':''}">${l}</button>`).join('')}</div>
 <div class="g">${S.badges.slice(0,S.nb||0).map((b,i)=>`<label class="f"><span>Lencana ${i+1}</span><input data-b="${i}" value="${esc(b)}"></label>`).join('')}</div></div>
 <div class="c"><h3>Font</h3><label class="f"><span>Judul besar</span><select data-f="tf">${fopts(S.tf)}</select></label><label class="f"><span>Nama pembalap</span><select data-f="nf">${fopts(S.nf)}</select></label><label class="f"><span>Teks lencana</span><select data-f="bf">${fopts(S.bf)}</select></label><p class="sm" style="margin:0">Font sendiri (.ttf, .otf, .woff, .woff2) disimpan di perangkat ini.</p></div>
+<div class="c"><h3>Ukuran &amp; posisi teks</h3>
+<b class="sm">Judul besar</b>${tr('ti','z','Ukuran %',30,200)}${tr('ti','sp','Jarak huruf',-10,60)}${tr('ti','x','Geser kiri-kanan',-540,540)}${tr('ti','y','Geser atas-bawah',-300,300)}
+<b class="sm">Nama pembalap</b>${tr('na','z','Ukuran %',30,250)}${tr('na','sp','Jarak huruf',-5,60)}${tr('na','x','Geser kiri-kanan',-540,540)}${tr('na','y','Geser atas-bawah',-300,300)}<label class="f"><span>Warna nama</span><input type="color" data-tc="na.c" value="${S.t.na.c}"></label>
+<b class="sm">Lencana</b>${tr('bd','z','Ukuran %',40,200)}${tr('bd','gap','Jarak antar lencana',100,300)}${tr('bd','x','Geser kiri-kanan',-540,540)}${tr('bd','y','Geser atas-bawah',-300,300)}
+<button data-a="trst" style="width:100%">Kembalikan ukuran &amp; posisi teks</button></div>
 <div class="c"><h3>Efek</h3><div class="seg"><button data-fx="1" class="${S.fx?'on':''}">Efek cahaya</button><button data-fx="0" class="${S.fx?'':'on'}">Tanpa efek</button></div>
 ${S.fx?`${rg('fxi','Kekuatan cahaya &amp; confetti',0,100)}<button data-a="seed" style="width:100%">🎲 Acak confetti</button>`:'<p class="sm" style="margin:0">Tanpa cahaya emas dan confetti.</p>'}</div>
 <div class="c"><h3>Desain latar</h3><p class="sm" style="margin-top:0">Gaya siap pakai (mengganti warna dan grafik latar):</p><div class="pre">${PRE.map((p,i)=>`<button data-pre="${i}">${p[0]}</button>`).join('')}</div>
@@ -181,6 +192,8 @@ P.addEventListener('input',e=>{const t=e.target;
   if(t.dataset.s){const k=t.dataset.s;S[k]=t.type=='range'?+t.value:t.value;if($('v'+k))$('v'+k).textContent=t.value;if(k=='gd'){save();panel()}}
   else if(t.dataset.b!=null)S.badges[+t.dataset.b]=t.value;
   else if(t.dataset.p){S.ph[0][t.dataset.p]=+t.value;$('vp'+t.dataset.p).textContent=t.value}
+  else if(t.dataset.t){const [g,k]=t.dataset.t.split('.');S.t[g][k]=+t.value;$('vt'+g+k).textContent=t.value}
+  else if(t.dataset.tc){const [g,k]=t.dataset.tc.split('.');S.t[g][k]=t.value}
   save();redraw()});
 P.addEventListener('change',e=>{const t=e.target;
   if(t.dataset.up!=null&&t.files[0]){const f=t.files[0];idbSet('p0',f).then(()=>toImg(f)).then(im=>{IMG[0]=im;panel();redraw();toast('Foto dipasang')})}
@@ -197,6 +210,7 @@ P.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;c
   else if(d.bgm){S.bgm=d.bgm;save();panel();redraw()}
   else if(d.pre!=null){Object.assign(S,PRE[+d.pre][1]);save();panel();redraw()}
   else if(d.spos){S.spos=d.spos;save();panel();redraw()}
+  else if(d.a=='trst'){S.t=JSON.parse(JSON.stringify(DEF.t));save();panel();redraw()}
   else if(d.a=='seed'){S.seed=Math.floor(Math.random()*99999)+1;save();redraw()}
   else if(d.a=='spadd'){if(S.sp.length>=6)return toast('Maksimal 6 logo');$('spup').click()}
   else if(d.a=='spdel'){const s=S.sp.splice(+d.i,1)[0];if(s){idbSet('sp'+s.id,null);delete SPI[s.id]}save();panel();redraw()}
