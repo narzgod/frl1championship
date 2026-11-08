@@ -10,41 +10,71 @@ button,.bt{background:#26262b;color:#fff;border:0;border-radius:8px;padding:10px
 #panel{padding:12px;max-width:640px;margin:auto;padding-bottom:90px}
 .c{background:#16161a;border-radius:10px;padding:12px;margin:0 0 10px}.c h3{margin:0 0 10px;font-size:15px;color:#e6c250}
 .f{display:block;margin:0 0 8px}.f span{display:block;font-size:12px;color:#999;margin-bottom:3px}
-input:not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]){width:100%;padding:10px;background:#1f1f24;color:#fff;border:1px solid #333;border-radius:8px;font-size:16px}
+input:not([type=checkbox]):not([type=range]):not([type=color]):not([type=file]),select{width:100%;padding:10px;background:#1f1f24;color:#fff;border:1px solid #333;border-radius:8px;font-size:16px}
 input[type=range]{width:100%}input[type=color]{width:100%;height:42px;border:0;background:none;padding:0}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}.seg button{padding:12px 8px}.seg .on{background:#c9a227;color:#111;font-weight:700}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-bottom:10px}.seg button{padding:12px 6px}.seg .on{background:#c9a227;color:#111;font-weight:700}
+.pre{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
 .g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row{display:flex;gap:8px;align-items:center;margin-bottom:8px}.row .bt{flex:1;text-align:center}
-.ph{width:46px;height:46px;border-radius:6px;background:#2a2a30 center/cover no-repeat;flex:none}
-.sm{font-size:12px;color:#999}
+.ph{width:46px;height:46px;border-radius:6px;background:#2a2a30 center/contain no-repeat;flex:none}
+.sm{font-size:12px;color:#999}.sp{display:flex;gap:8px;align-items:center;background:#1f1f24;border-radius:8px;padding:6px;margin-bottom:6px}.sp .ph{background-color:#444}
 #dl{position:fixed;bottom:0;left:0;right:0;border-radius:0;background:#c9a227;color:#111;padding:15px;font-weight:700;z-index:9}
 #ts{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#fff;color:#000;padding:8px 14px;border-radius:20px;opacity:0;transition:.3s;z-index:9}
 </style></head><body>
 <div id="top"><canvas id="cv" width="1080" height="1350"></canvas></div>
-<main id="panel"></main><button id="dl">⬇ Unduh PNG</button><div id="ts"></div><input type="file" id="fup" accept="image/*" hidden>
+<main id="panel"></main><button id="dl">⬇ Unduh PNG</button><div id="ts"></div><input type="file" id="fup" accept=".ttf,.otf,.woff,.woff2" hidden><input type="file" id="spup" accept="image/*" multiple hidden>
 <script>
 const W=1080,H=1350,$=i=>document.getElementById(i),cv=$('cv'),cx=cv.getContext('2d');
-const DEF={name:'NAMA PEMBALAP',title:'GRAND SLAMS',badges:['POLE POSITION','100% LAPS LED','FASTEST LAP','RACE WIN'],showBadges:true,fx:true,fxi:70,seed:7,gold:'#d4a82a',bg:'#0b0a07',ph:[{z:100,x:0,y:0,f:25}]};
+const DEF={name:'NAMA PEMBALAP',title:'GRAND SLAMS',badges:['POLE POSITION','100% LAPS LED','FASTEST LAP','RACE WIN'],nb:4,fx:true,fxi:70,seed:7,gold:'#d4a82a',
+  bgm:'flat',bg:'#0b0a07',bg2:'#1c1406',gd:'diag',gc:'#ffffff',ga:6,gs:100,gr:24,
+  tf:'MGD',nf:'MGT7',bf:'MGT7',sz:48,spos:'bottom',sp:[],ph:[{z:100,x:0,y:0,f:0}],v:3};
 let S;try{S=JSON.parse(localStorage.getItem('f1c-gs'))}catch(e){}
 S=Object.assign({},DEF,S||{});S.ph=DEF.ph.map((d,i)=>Object.assign({},d,(S.ph||[])[i]||{}));
+if(S.v!==3){S.ph=JSON.parse(JSON.stringify(DEF.ph));S.v=3;if(!Array.isArray(S.sp))S.sp=[];if(S.showBadges===false)S.nb=0}
+if(!Array.isArray(S.sp))S.sp=[];
 const save=()=>{try{localStorage.setItem('f1c-gs',JSON.stringify(S))}catch(e){}};
 const toast=m=>{const t=$('ts');t.textContent=m;t.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.opacity=0,1800)};
-/* photos live in the browser database (they are too big for localStorage) */
-const IMG=[null];
+/* photos, sponsor logos and own fonts are kept in the browser database (too big for localStorage) */
 const idb=()=>new Promise((ok,no)=>{const r=indexedDB.open('f1c-gs',1);r.onupgradeneeded=()=>r.result.createObjectStore('p');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 const idbSet=(k,v)=>idb().then(d=>new Promise(ok=>{const t=d.transaction('p','readwrite');v?t.objectStore('p').put(v,k):t.objectStore('p').delete(k);t.oncomplete=ok}));
 const idbGet=k=>idb().then(d=>new Promise(ok=>{const q=d.transaction('p').objectStore('p').get(k);q.onsuccess=()=>ok(q.result)}));
 const toImg=b=>new Promise(ok=>{const u=URL.createObjectURL(b),i=new Image();i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=u});
+const IMG=[null],SPI={};
+/* fonts */
+const FB={MGD:['MotoGP Display Bold','"MotoGP Display"',700],MGT7:['MotoGP Text Bold','"MotoGP Text"',700],MGT4:['MotoGP Text Regular','"MotoGP Text"',400],IMP:['Impact','Impact',400],ARB:['Arial Black','"Arial Black"',400],GEO:['Georgia','Georgia',700],COU:['Courier New','"Courier New"',700]};
+let CF=[];let UPT=null;
+const fnt=(id,px)=>{const c=CF.find(f=>f.id==id);if(c)return `400 ${px}px "${c.fam}"`;const b=FB[id]||FB.MGT7;return `${b[2]} ${px}px ${b[1]},Arial,sans-serif`};
+const fontOk=buf=>{const u=new Uint8Array(buf.slice(0,4)),t=String.fromCharCode(u[0],u[1],u[2],u[3]);return(u[0]==0&&u[1]==1&&u[2]==0&&u[3]==0)||t=='OTTO'||t=='true'||t=='wOFF'||t=='wOF2'};
+const regFont=(id,buf)=>{const fam='U'+id;return new FontFace(fam,buf).load().then(ff=>{document.fonts.add(ff);return fam})};
 /* colour helpers: one gold picks the light and dark tones */
 const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),hex=a=>'#'+a.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
 const mix=(h,t,w)=>hex(rgb(h).map(v=>v+(w-v)*t)),lite=(h,t)=>mix(h,t,255),dark=(h,t)=>mix(h,t,0);
+const rgba=(h,a)=>{const c=rgb(h);return `rgba(${c[0]},${c[1]},${c[2]},${a})`},mixc=(a,b,t)=>{const x=rgb(a),y=rgb(b);return hex(x.map((v,i)=>v+(y[i]-v)*t))};
 const rnd=s=>()=>(s=(s*16807)%2147483647)/2147483647;
-const SL=[{x:90,y:20,w:900,h:1010}],ORDER=[0];
+/* background graphics (same shapes as the other poster editors) */
+const FX={
+bars(c,col,s){c.fillStyle=col;for(let x=-1500;x<1500;x+=110*s)c.fillRect(x,-1500,46*s,3000)},
+diag(c,col,s){const P=430*s,dk=mixc(col,'#000000',.55);for(let x=-2400;x<2400;x+=P){c.fillStyle=col;c.fillRect(x,-2600,96*s,5200);c.fillStyle=dk;c.fillRect(x+106*s,-2600,7*s,5200);c.fillStyle=col;c.fillRect(x+126*s,-2600,44*s,5200)}},
+diag2(c,col,s){const P=100*s,w=36*s;c.fillStyle=col;for(let x=-2400;x<2400;x+=P)c.fillRect(x,-2600,w,5200)},
+chev(c,col,s){c.strokeStyle=col;c.lineWidth=36*s;for(let y=-1400;y<1400;y+=120*s){c.beginPath();c.moveTo(-900,y);c.lineTo(0,y+180);c.lineTo(900,y);c.stroke()}},
+dots(c,col,s){const st=Math.max(12,28*s),R=Math.max(1.2,st*.09);c.fillStyle=col;c.beginPath();for(let y=-1300;y<1300;y+=st){const r=R*(1-.55*((y+1300)/2600));for(let x=-1300;x<1300;x+=st){c.moveTo(x+r,y);c.arc(x,y,r,0,6.2832)}}c.fill()},
+check(c,col,s){c.fillStyle=col;const q=60*s;for(let i=-30;i<30;i++)for(let j=-30;j<30;j++)if((i+j)%2==0)c.fillRect(i*q,j*q,q,q)},
+ring(c,col,s){c.strokeStyle=col;c.lineWidth=14*s;for(let r=120*s;r<1500;r+=170*s){c.beginPath();c.arc(0,0,r,0,7);c.stroke()}},
+speed(c,col,s){c.fillStyle=col;const r=rnd(7);for(let i=0;i<28;i++)c.fillRect(r()*1800-900,r()*2400-1200,r()*900+200,(4+r()*14)*s)},
+streak(c,col,s){const r=rnd(11);c.save();for(let i=0;i<26;i++){const len=(350+r()*900)*s,th=(3+r()*10)*Math.max(.6,s),x=r()*2000-1000-len/2,y=r()*2200-1100,g=c.createLinearGradient(x,0,x+len,0);g.addColorStop(0,rgba(col,0));g.addColorStop(.3,rgba(col,1));g.addColorStop(.7,rgba(col,1));g.addColorStop(1,rgba(col,0));c.globalAlpha=.35+.65*r();c.fillStyle=g;c.fillRect(x,y,len,th)}c.restore()},
+grid(c,col,s){c.strokeStyle=col;c.lineWidth=3;for(let x=-1500;x<1500;x+=90*s){c.beginPath();c.moveTo(x,-1500);c.lineTo(x,1500);c.moveTo(-1500,x);c.lineTo(1500,x);c.stroke()}}};
+const GD=[['none','Tanpa grafik'],['bars','Garis miring'],['diag','Pita diagonal lebar'],['diag2','Pita diagonal tipis'],['chev','Chevron'],['dots','Titik halftone'],['check','Kotak catur'],['ring','Lingkaran'],['speed','Garis kecepatan'],['streak','Garis kecepatan memudar'],['grid','Grid tipis']];
+const PRE=[
+ ['Emas klasik',{bgm:'flat',bg:'#0b0a07',gd:'diag',gc:'#ffffff',ga:6,gs:100,gr:24,gold:'#d4a82a',fx:true}],
+ ['Hitam karbon',{bgm:'grad',bg:'#0c0d0f',bg2:'#23262d',gd:'check',gc:'#ffffff',ga:5,gs:50,gr:0,gold:'#d4a82a'}],
+ ['Merah balap',{bgm:'grad',bg:'#5c0509',bg2:'#0a0203',gd:'streak',gc:'#ff5a3c',ga:40,gs:100,gr:0,gold:'#e8c24a'}],
+ ['Biru malam',{bgm:'grad',bg:'#0a1c4a',bg2:'#02040c',gd:'chev',gc:'#4d7dff',ga:16,gs:100,gr:0,gold:'#d4a82a'}],
+ ['Perak',{bgm:'grad',bg:'#2b2f36',bg2:'#07080a',gd:'diag2',gc:'#ffffff',ga:6,gs:100,gr:24,gold:'#bfc5cf'}],
+ ['Hitam polos',{bgm:'flat',bg:'#050505',gd:'none',ga:6,gold:'#d4a82a'}]];
 let exporting=false;
-function bg(g){
-  cx.fillStyle=S.bg;cx.fillRect(0,0,W,H);
-  cx.save();cx.fillStyle='rgba(255,255,255,.035)';
-  for(let i=-3;i<9;i++){cx.beginPath();cx.moveTo(i*210,0);cx.lineTo(i*210+90,0);cx.lineTo(i*210-420,H);cx.lineTo(i*210-510,H);cx.closePath();cx.fill()}
-  cx.restore();
+function bg(){
+  if(S.bgm=='grad'){const g=cx.createLinearGradient(0,0,W*.35,H);g.addColorStop(0,S.bg);g.addColorStop(1,S.bg2);cx.fillStyle=g}else cx.fillStyle=S.bg;
+  cx.fillRect(0,0,W,H);
+  if(S.gd!='none'&&FX[S.gd]){cx.save();cx.globalAlpha=Math.min(1,S.ga/100);cx.translate(W/2,H/2);cx.rotate(S.gr*Math.PI/180);FX[S.gd](cx,S.gc,S.gs/100);cx.restore()}
   const v=cx.createLinearGradient(0,0,0,H);v.addColorStop(0,'rgba(0,0,0,.25)');v.addColorStop(.55,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.6)');cx.fillStyle=v;cx.fillRect(0,0,W,H);
 }
 function glow(){
@@ -64,15 +94,16 @@ function confetti(){
   for(let i=0;i<46;i++){const x=r()*W,y=r()*H*.85,rad=2+r()*9,g=cx.createRadialGradient(x,y,0,x,y,rad);g.addColorStop(0,`rgba(255,220,120,${.55*k})`);g.addColorStop(1,'rgba(255,200,60,0)');cx.fillStyle=g;cx.beginPath();cx.arc(x,y,rad,0,7);cx.fill()}
   cx.restore();
 }
-function photo(i){
-  const s=SL[i],p=S.ph[i],im=IMG[i];
-  if(!im){if(exporting)return;cx.save();cx.strokeStyle='rgba(212,168,42,.5)';cx.setLineDash([10,8]);cx.lineWidth=3;cx.strokeRect(Math.max(8,s.x)+6,s.y+6,Math.min(s.w,W-Math.max(8,s.x))-12,s.h-12);cx.fillStyle='rgba(212,168,42,.7)';cx.font='700 34px "MotoGP Text",Arial';cx.textAlign='center';cx.fillText('FOTO PEMBALAP',s.x+s.w/2,s.y+s.h/2);cx.restore();return}
-  const o=document.createElement('canvas');o.width=s.w;o.height=s.h;const c=o.getContext('2d');
-  const sc=Math.max(s.w/im.width,s.h/im.height)*p.z/100,dw=im.width*sc,dh=im.height*sc;
-  c.drawImage(im,(s.w-dw)/2+p.x*s.w/100,(s.h-dh)/2+p.y*s.h/100,dw,dh);
-  if(p.f>0){const f=Math.min(.95,p.f/100);c.save();c.globalCompositeOperation='destination-in';c.translate(s.w/2,s.h/2);c.scale(s.w/2,s.h/2);
-    const m=c.createRadialGradient(0,0,Math.max(0,1-f*1.3),0,0,1.18);m.addColorStop(0,'rgba(0,0,0,1)');m.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=m;c.fillRect(-2,-2,4,4);c.restore()}
-  cx.save();if(S.fx){cx.shadowColor=`rgba(255,190,60,${.55*S.fxi/100})`;cx.shadowBlur=70}cx.drawImage(o,s.x,s.y);cx.restore();
+function photo(){
+  /* the whole photo is drawn as it is: no frame crops it, only the edge of the poster itself limits it */
+  const p=S.ph[0],im=IMG[0];
+  if(!im){if(!exporting){cx.save();cx.fillStyle='rgba(212,168,42,.75)';cx.font='700 34px "MotoGP Text",Arial';cx.textAlign='center';cx.fillText('FOTO PEMBALAP',W/2,500);cx.restore()}return}
+  const sc=Math.min(W/im.width,1030/im.height)*p.z/100,dw=im.width*sc,dh=im.height*sc,x=(W-dw)/2+p.x*W/100,y=(1030-dh)/2+p.y*H/100;
+  let src=im;
+  if(p.f>0){const o=document.createElement('canvas');o.width=Math.max(1,Math.round(dw));o.height=Math.max(1,Math.round(dh));const c=o.getContext('2d'),f=Math.min(.95,p.f/100);
+    c.drawImage(im,0,0,o.width,o.height);c.save();c.globalCompositeOperation='destination-in';c.translate(o.width/2,o.height/2);c.scale(o.width/2,o.height/2);
+    const m=c.createRadialGradient(0,0,Math.max(0,1-f*1.3),0,0,1.18);m.addColorStop(0,'rgba(0,0,0,1)');m.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=m;c.fillRect(-2,-2,4,4);c.restore();src=o}
+  cx.save();if(S.fx){cx.shadowColor=`rgba(255,190,60,${.55*S.fxi/100})`;cx.shadowBlur=70}cx.drawImage(src,x,y,dw,dh);cx.restore();
 }
 function leafP(L,w){cx.beginPath();cx.moveTo(0,0);cx.bezierCurveTo(L*.25,-w,L*.75,-w*.9,L,0);cx.bezierCurveTo(L*.75,w*.9,L*.25,w,0,0);cx.closePath()}
 /* wreath: two curved stems, each carrying two rows of slim pointed leaves that shrink toward the open top */
@@ -88,58 +119,97 @@ function laurel(x,y,r){
 }
 function badge(x,y,t){
   laurel(x,y,54);const w=String(t||'').toUpperCase().split(' '),l=w.length>2?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:w;
-  cx.save();cx.fillStyle=lite(S.gold,.35);cx.textAlign='center';cx.textBaseline='middle';cx.font='700 17px "MotoGP Text",Arial';
+  cx.save();cx.fillStyle=lite(S.gold,.35);cx.textAlign='center';cx.textBaseline='middle';cx.font=fnt(S.bf,17);
   l.forEach((s,i)=>cx.fillText(s,x,y+(i-(l.length-1)/2)*21));cx.restore();
 }
-function spaced(t,x,y,px,sp){
+function spaced(t,x,y,sp){
   const ch=[...t];let w=0;ch.forEach(c=>w+=cx.measureText(c).width+sp);w-=sp;let cur=x-w/2;
   cx.textAlign='left';ch.forEach(c=>{cx.fillText(c,cur,y);cur+=cx.measureText(c).width+sp});
 }
-function gtitle(){
+function gtitle(y){
   const t=(S.title||'').toUpperCase();if(!t)return;cx.save();cx.textBaseline='middle';
-  let fs=170;cx.font=`700 ${fs}px "MotoGP Display",Impact,sans-serif`;const mw=cx.measureText(t).width;if(mw>980){fs=Math.floor(fs*980/mw);cx.font=`700 ${fs}px "MotoGP Display",Impact,sans-serif`}
-  const y=1240,g=cx.createLinearGradient(0,y-fs/2,0,y+fs/2);g.addColorStop(0,lite(S.gold,.75));g.addColorStop(.35,lite(S.gold,.2));g.addColorStop(.55,S.gold);g.addColorStop(.8,dark(S.gold,.35));g.addColorStop(1,lite(S.gold,.3));
+  let fs=170;cx.font=fnt(S.tf,fs);const mw=cx.measureText(t).width;if(mw>980){fs=Math.floor(fs*980/mw);cx.font=fnt(S.tf,fs)}
+  const g=cx.createLinearGradient(0,y-fs/2,0,y+fs/2);g.addColorStop(0,lite(S.gold,.75));g.addColorStop(.35,lite(S.gold,.2));g.addColorStop(.55,S.gold);g.addColorStop(.8,dark(S.gold,.35));g.addColorStop(1,lite(S.gold,.3));
   cx.textAlign='center';cx.shadowColor='rgba(0,0,0,.6)';cx.shadowBlur=18;cx.shadowOffsetY=6;cx.fillStyle=g;cx.fillText(t,540,y);cx.restore();
+}
+function sponsors(){
+  const L=S.sp.map(s=>SPI[s.id]).filter(Boolean);if(!L.length)return 0;
+  const h=S.sz,gap=38;let ws=L.map(i=>i.width*h/i.height),tot=ws.reduce((a,b)=>a+b,0)+gap*(L.length-1),k=tot>980?980/tot:1;
+  const hh=h*k,y=S.spos=='top'?44:1332-hh;let x=(W-tot*k)/2;
+  L.forEach((im,i)=>{const w=ws[i]*k;cx.drawImage(im,x,y,w,hh);x+=w+gap*k});
+  return S.spos=='top'?0:hh+34;
 }
 function draw(){
   cx.clearRect(0,0,W,H);bg();if(S.fx)glow();
-  ORDER.forEach(photo);
+  photo();
   const b=cx.createLinearGradient(0,760,0,H);b.addColorStop(0,'rgba(0,0,0,0)');b.addColorStop(.35,'rgba(6,5,3,.82)');b.addColorStop(1,'rgba(6,5,3,.96)');cx.fillStyle=b;cx.fillRect(0,760,W,H-760);
   if(S.fx)confetti();
-  if(S.showBadges)S.badges.forEach((t,i)=>badge(270+i*180,1020,t));
-  cx.save();cx.fillStyle='#fff';cx.font='700 40px "MotoGP Text",Arial';cx.textBaseline='middle';spaced((S.name||'').toUpperCase(),540,1120,40,16);cx.restore();
-  gtitle();
+  const up=sponsors();
+  const n=S.nb|0;if(n>0){const x0=540-(n-1)*90;S.badges.slice(0,n).forEach((t,i)=>badge(x0+i*180,1020-up,t))}
+  cx.save();cx.fillStyle='#fff';cx.font=fnt(S.nf,40);cx.textBaseline='middle';spaced((S.name||'').toUpperCase(),540,1120-up,16);cx.restore();
+  gtitle(1240-up);
 }
 let rq=0;const redraw=()=>{cancelAnimationFrame(rq);rq=requestAnimationFrame(draw)};
 /* panel */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fopts=v=>Object.keys(FB).map(k=>`<option value="${k}" ${v==k?'selected':''}>${FB[k][0]}</option>`).join('')+CF.map(f=>`<option value="${f.id}" ${v==f.id?'selected':''}>${esc(f.l)}</option>`).join('')+'<option value="__up__">+ Upload font sendiri...</option>';
 function panel(){
-  const sl=(i,k,l,mn,mx,st)=>`<label class="f"><span>${l}: <b id="v${i}${k}">${S.ph[i][k]}</b></span><input type="range" min="${mn}" max="${mx}" step="${st||1}" value="${S.ph[i][k]}" data-p="${i}" data-k="${k}"></label>`;
-  $('panel').innerHTML=`<div class="c"><h3>Teks</h3><label class="f"><span>Nama pembalap</span><input data-s="name" value="${esc(S.name)}"></label><label class="f"><span>Judul besar</span><input data-s="title" value="${esc(S.title)}"></label>
-<div class="row"><label class="sm" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-s="showBadges" ${S.showBadges?'checked':''}> Tampilkan 4 lencana laurel</label></div>
-<div class="g">${S.badges.map((b,i)=>`<label class="f"><span>Lencana ${i+1}</span><input data-b="${i}" value="${esc(b)}"></label>`).join('')}</div></div>
+  const sl=(k,l,mn,mx,st)=>`<label class="f"><span>${l}: <b id="vp${k}">${S.ph[0][k]}</b></span><input type="range" min="${mn}" max="${mx}" step="${st||1}" value="${S.ph[0][k]}" data-p="${k}"></label>`;
+  const rg=(k,l,mn,mx)=>`<label class="f"><span>${l}: <b id="v${k}">${S[k]}</b></span><input type="range" min="${mn}" max="${mx}" value="${S[k]}" data-s="${k}"></label>`;
+  $('panel').innerHTML=`<div class="c"><h3>Teks</h3><label class="f"><span>Nama pembalap</span><input data-s="name" value="${esc(S.name)}"></label><label class="f"><span>Judul besar</span><input data-s="title" value="${esc(S.title)}"></label></div>
+<div class="c"><h3>Lencana laurel</h3><div class="seg">${[[0,'Tanpa'],[3,'3 lencana'],[4,'4 lencana']].map(([n,l])=>`<button data-nb="${n}" class="${S.nb==n?'on':''}">${l}</button>`).join('')}</div>
+<div class="g">${S.badges.slice(0,S.nb||0).map((b,i)=>`<label class="f"><span>Lencana ${i+1}</span><input data-b="${i}" value="${esc(b)}"></label>`).join('')}</div></div>
+<div class="c"><h3>Font</h3><label class="f"><span>Judul besar</span><select data-f="tf">${fopts(S.tf)}</select></label><label class="f"><span>Nama pembalap</span><select data-f="nf">${fopts(S.nf)}</select></label><label class="f"><span>Teks lencana</span><select data-f="bf">${fopts(S.bf)}</select></label><p class="sm" style="margin:0">Font sendiri (.ttf, .otf, .woff, .woff2) disimpan di perangkat ini.</p></div>
 <div class="c"><h3>Efek</h3><div class="seg"><button data-fx="1" class="${S.fx?'on':''}">Efek cahaya</button><button data-fx="0" class="${S.fx?'':'on'}">Tanpa efek</button></div>
-${S.fx?`<label class="f"><span>Kekuatan cahaya &amp; confetti: <b id="vfxi">${S.fxi}</b>%</span><input type="range" min="0" max="100" value="${S.fxi}" data-s="fxi"></label><button data-a="seed" style="width:100%">🎲 Acak confetti</button>`:'<p class="sm" style="margin:0">Latar gelap polos tanpa cahaya emas dan confetti.</p>'}</div>
-<div class="c"><h3>Warna</h3><div class="g"><label class="f"><span>Emas (judul, lencana, confetti)</span><input type="color" data-s="gold" value="${S.gold}"></label><label class="f"><span>Latar</span><input type="color" data-s="bg" value="${S.bg}"></label></div></div>
-<div class="c"><h3>Foto pembalap</h3><p class="sm" style="margin-top:0">Satu foto saja. Foto potongan (PNG transparan) paling bagus. Foto biasa bisa dihaluskan tepinya dengan "Haluskan tepi".</p><div class="row"><div class="ph" id="th0"></div><label class="bt">Pilih foto<input type="file" accept="image/*" data-up="0" hidden></label><button data-a="del" data-i="0">Hapus</button></div>${sl(0,'z','Ukuran %',40,300)}${sl(0,'x','Geser kiri-kanan',-100,100)}${sl(0,'y','Geser atas-bawah',-100,100)}${sl(0,'f','Haluskan tepi',0,90)}</div>`
-+`<div class="c"><button data-a="rst" style="width:100%">Reset semua</button></div>`;
-  IMG.forEach((im,i)=>{if(im&&$('th'+i))$('th'+i).style.backgroundImage=`url(${im.src})`});
+${S.fx?`${rg('fxi','Kekuatan cahaya &amp; confetti',0,100)}<button data-a="seed" style="width:100%">🎲 Acak confetti</button>`:'<p class="sm" style="margin:0">Tanpa cahaya emas dan confetti.</p>'}</div>
+<div class="c"><h3>Desain latar</h3><p class="sm" style="margin-top:0">Gaya siap pakai (mengganti warna dan grafik latar):</p><div class="pre">${PRE.map((p,i)=>`<button data-pre="${i}">${p[0]}</button>`).join('')}</div>
+<div class="seg"><button data-bgm="flat" class="${S.bgm=='flat'?'on':''}">Satu warna</button><button data-bgm="grad" class="${S.bgm=='grad'?'on':''}">Gradasi</button></div>
+<div class="g"><label class="f"><span>${S.bgm=='grad'?'Warna atas':'Warna latar'}</span><input type="color" data-s="bg" value="${S.bg}"></label>${S.bgm=='grad'?`<label class="f"><span>Warna bawah</span><input type="color" data-s="bg2" value="${S.bg2}"></label>`:''}</div>
+<label class="f"><span>Grafik latar</span><select data-s="gd">${GD.map(([k,l])=>`<option value="${k}" ${S.gd==k?'selected':''}>${l}</option>`).join('')}</select></label>
+${S.gd!='none'?`<label class="f"><span>Warna grafik</span><input type="color" data-s="gc" value="${S.gc}"></label>${rg('ga','Kekuatan grafik %',1,100)}${rg('gs','Ukuran grafik %',30,250)}${rg('gr','Sudut grafik °',-90,90)}`:''}</div>
+<div class="c"><h3>Warna emas</h3><label class="f"><span>Judul, lencana, confetti</span><input type="color" data-s="gold" value="${S.gold}"></label></div>
+<div class="c"><h3>Logo sponsor</h3>${S.sp.map((s,i)=>`<div class="sp"><div class="ph" id="sp${i}"></div><span style="flex:1">Logo ${i+1}</span><button data-a="spdel" data-i="${i}">Hapus</button></div>`).join('')}
+<button data-a="spadd" style="width:100%;margin-bottom:8px">+ Tambah logo sponsor${S.sp.length?'':' (bisa lebih dari satu)'}</button>
+${S.sp.length?`<div class="seg"><button data-spos="bottom" class="${S.spos=='bottom'?'on':''}">Di bawah</button><button data-spos="top" class="${S.spos=='top'?'on':''}">Di atas</button></div>${rg('sz','Tinggi logo (px)',24,90)}`:'<p class="sm" style="margin:0">Logo PNG transparan paling bagus. Semua logo disusun satu baris di tengah.</p>'}</div>
+<div class="c"><h3>Foto pembalap</h3><p class="sm" style="margin-top:0">Satu foto saja, ditampilkan utuh tanpa bingkai sehingga tepinya tidak terpotong. Foto potongan (PNG transparan) paling bagus. "Haluskan tepi" hanya dipakai jika foto punya latar.</p><div class="row"><div class="ph" id="th0"></div><label class="bt">Pilih foto<input type="file" accept="image/*" data-up="0" hidden></label><button data-a="del">Hapus</button></div>${sl('z','Ukuran %',20,300)}${sl('x','Geser kiri-kanan',-100,100)}${sl('y','Geser atas-bawah',-100,100)}${sl('f','Haluskan tepi',0,90)}</div>
+<div class="c"><button data-a="rst" style="width:100%">Reset semua</button></div>`;
+  if(IMG[0]&&$('th0'))$('th0').style.backgroundImage=`url(${IMG[0].src})`;
+  S.sp.forEach((s,i)=>{if(SPI[s.id]&&$('sp'+i))$('sp'+i).style.backgroundImage=`url(${SPI[s.id].src})`});
 }
 const P=$('panel');
 P.addEventListener('input',e=>{const t=e.target;
-  if(t.dataset.s){const k=t.dataset.s;S[k]=t.type=='checkbox'?t.checked:t.type=='range'?+t.value:t.value;if(k=='fxi'&&$('vfxi'))$('vfxi').textContent=t.value}
+  if(t.dataset.s){const k=t.dataset.s;S[k]=t.type=='range'?+t.value:t.value;if($('v'+k))$('v'+k).textContent=t.value;if(k=='gd'){save();panel()}}
   else if(t.dataset.b!=null)S.badges[+t.dataset.b]=t.value;
-  else if(t.dataset.p!=null){const i=+t.dataset.p,k=t.dataset.k;S.ph[i][k]=+t.value;$('v'+i+k).textContent=t.value}
+  else if(t.dataset.p){S.ph[0][t.dataset.p]=+t.value;$('vp'+t.dataset.p).textContent=t.value}
   save();redraw()});
-P.addEventListener('change',e=>{const t=e.target;if(t.dataset.up==null||!t.files[0])return;const i=+t.dataset.up,f=t.files[0];
-  idbSet('p'+i,f).then(()=>toImg(f)).then(im=>{IMG[i]=im;panel();redraw();toast('Foto '+(i+1)+' dipasang')})});
-P.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-  if(b.dataset.fx!=null){S.fx=b.dataset.fx=='1';save();panel();redraw()}
-  else if(b.dataset.a=='seed'){S.seed=Math.floor(Math.random()*99999)+1;save();redraw()}
-  else if(b.dataset.a=='del'){const i=+b.dataset.i;IMG[i]=null;idbSet('p'+i,null);panel();redraw()}
-  else if(b.dataset.a=='rst'){if(!confirm('Kembalikan semua pengaturan dan hapus semua foto?'))return;localStorage.removeItem('f1c-gs');[0].forEach(i=>idbSet('p'+i,null));location.reload()}});
+P.addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.up!=null&&t.files[0]){const f=t.files[0];idbSet('p0',f).then(()=>toImg(f)).then(im=>{IMG[0]=im;panel();redraw();toast('Foto dipasang')})}
+  else if(t.dataset.f){if(t.value=='__up__'){UPT=t.dataset.f;$('fup').click();panel();return}S[t.dataset.f]=t.value;save();redraw()}});
+$('fup').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const tgt=UPT;UPT=null;
+  f.arrayBuffer().then(buf=>{if(!fontOk(buf)){toast('Bukan file font yang didukung');return}
+    const id=Date.now().toString(36);regFont(id,buf).then(()=>{const o={id,l:f.name.replace(/\.\w+$/,'')};o.fam='U'+id;CF.push(o);if(tgt)S[tgt]=id;save();saveFonts(buf,o);panel();redraw();toast('Font "'+o.l+'" dipakai')}).catch(()=>toast('Font ini tidak bisa dipakai browser'))})});
+const saveFonts=(buf,o)=>idbSet('font:'+o.id,{l:o.l,buf});
+$('spup').addEventListener('change',e=>{const fs=[...e.target.files].slice(0,6-S.sp.length);e.target.value='';
+  fs.forEach(f=>{const id=Date.now().toString(36)+Math.random().toString(36).slice(2,5);idbSet('sp'+id,f).then(()=>toImg(f)).then(im=>{if(!im)return;SPI[id]=im;S.sp.push({id});save();panel();redraw()})})});
+P.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+  if(d.fx!=null){S.fx=d.fx=='1';save();panel();redraw()}
+  else if(d.nb!=null){S.nb=+d.nb;save();panel();redraw()}
+  else if(d.bgm){S.bgm=d.bgm;save();panel();redraw()}
+  else if(d.pre!=null){Object.assign(S,PRE[+d.pre][1]);save();panel();redraw()}
+  else if(d.spos){S.spos=d.spos;save();panel();redraw()}
+  else if(d.a=='seed'){S.seed=Math.floor(Math.random()*99999)+1;save();redraw()}
+  else if(d.a=='spadd'){if(S.sp.length>=6)return toast('Maksimal 6 logo');$('spup').click()}
+  else if(d.a=='spdel'){const s=S.sp.splice(+d.i,1)[0];if(s){idbSet('sp'+s.id,null);delete SPI[s.id]}save();panel();redraw()}
+  else if(d.a=='del'){IMG[0]=null;idbSet('p0',null);panel();redraw()}
+  else if(d.a=='rst'){if(!confirm('Kembalikan semua pengaturan dan hapus foto, logo, dan font sendiri?'))return;localStorage.removeItem('f1c-gs');idb().then(db=>{const t=db.transaction('p','readwrite');t.objectStore('p').clear();t.oncomplete=()=>location.reload()})}});
 $('dl').onclick=()=>{exporting=true;draw();exporting=false;cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='grand-slam-'+((S.name||'poster').toLowerCase().replace(/[^a-z0-9]+/g,'-'))+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);draw();toast('Poster diunduh')},'image/png')};
 panel();draw();
 Promise.all(['700 20px "MotoGP Display"','400 20px "MotoGP Text"','700 20px "MotoGP Text"'].map(f=>document.fonts.load(f))).then(draw);
-Promise.all([0].map(i=>idbGet('p'+i).then(b=>b?toImg(b):null).catch(()=>null))).then(a=>{a.forEach((im,i)=>IMG[i]=im);panel();draw()});
+/* restore photo, sponsor logos and own fonts */
+idb().then(db=>new Promise(ok=>{const q=db.transaction('p').objectStore('p').openCursor(),out=[];q.onsuccess=()=>{const c=q.result;if(c){out.push([c.key,c.value]);c.continue()}else ok(out)}})).then(async rows=>{
+  for(const [k,v] of rows){
+    if(k=='p0')IMG[0]=await toImg(v);
+    else if(k.startsWith('sp')){const id=k.slice(2);if(S.sp.some(s=>s.id==id))SPI[id]=await toImg(v)}
+    else if(k.startsWith('font:')){const id=k.slice(5);try{await regFont(id,v.buf);CF.push({id,l:v.l,fam:'U'+id})}catch(e){}}}
+  panel();draw()}).catch(()=>{});
 </script><script src="/owner/tools/prev.js"></script></body></html>
