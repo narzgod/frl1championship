@@ -72,7 +72,7 @@ const TIERC={rookie:'#8995A5',contender:'#46988A',premier:'#477EAD',elite:'#9474
 /* upgrade system v2: one engine set (engine + turbo) per team, a team CP wallet, sponsors and HP packages */
 const UP_ENG=['Piston','ECU','Transmission','Camshaft'],UP_TRB=['Turbo','Intercooler','Air Filter','Pipe'],UP_NM=k=>k=='e'?UP_ENG:UP_TRB;
 const UP_BASE=[250,300,450,700,900],UP_MUL=[1.5,1.25,1,.8],UP_KD=k=>k=='e'?'d':'td';
-const upOn=e=>!!(e&&e.up&&e.up.on),upSets=e=>((e&&e.up)||{}).en||[],upSet=(e,id)=>upSets(e).find(x=>x.id==id);
+const upOn=e=>!!(e&&e.up&&e.up.on),upTb=e=>!((e&&e.up)||{}).noTurbo,upSupCfg=u=>{u=u||{};const f=u.freeSup!=null?+u.freeSup:(u.maxSup!=null?+u.maxSup:2),c=u.capSup!=null?+u.capSup:Math.max(f,4);return{free:f,cap:Math.max(c,f)}},upSets=e=>((e&&e.up)||{}).en||[],upSet=(e,id)=>upSets(e).find(x=>x.id==id);
 const upMax=(set,k,i)=>{const m=+((((set||{})[UP_KD(k)]||[])[i])||{}).m;return m>=1&&m<=8?m:5};
 const upLv=(set,k,i)=>Math.max(0,Math.min(upMax(set,k,i),+((((set||{})[UP_KD(k)]||[])[i])||{}).l||0));
 const upDef=(set,k)=>[0,1,2,3].map(i=>upLv(set,k,i));

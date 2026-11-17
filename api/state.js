@@ -28,6 +28,17 @@ module.exports = async (req, res) => {
           ct.up[k].forEach(r => { if ((r.at || 0) > base && !have.has(r.id)) { (ot.up[k] = ot.up[k] || []).push(r); merged++; } });
         });
       });
+      /* keep sponsors a team signed itself after the admin last loaded the data (the ledger entries of the signing are kept above) */
+      cur.tm.forEach(ct => {
+        const ot = c.tm.find(x => x.id == ct.id);
+        if (!ot || !ct.up || !Array.isArray(ct.up.sp)) return;
+        const at = ct.up.spAt || {};
+        ct.up.sp.forEach(id => {
+          if ((at[id] || 0) <= base || (ot.up && (ot.up.sp || []).includes(id))) return;
+          ot.up = ot.up || {}; ot.up.sp = ot.up.sp || []; ot.up.sk = ot.up.sk || {}; ot.up.spAt = ot.up.spAt || {};
+          ot.up.sp.push(id); ot.up.sk[id] = (ct.up.sk || {})[id] || []; ot.up.spAt[id] = at[id]; merged++;
+        });
+      });
       await L.putState(c);
       return res.status(200).json({ s: c, ts: Date.now(), merged });
     }

@@ -8,6 +8,11 @@ const costOf = (e, k, i, lv) => { const row = (((e.up || {}).cc || {})[k] || [])
 const maxOf = (set, k, i) => { const m = +((((set || {})[k === 'e' ? 'd' : 'td'] || [])[i]) || {}).m; return m >= 1 && m <= 8 ? m : 5; };
 /* split of the report budget between the two main drivers: 50:50, or 70:30 with a focus driver */
 const shares = (dids, m, f, total) => { const o = {}; if (dids.length < 2) { dids.forEach(d => { o[d] = total; }); return o; } if (m === '70' && dids.includes(f)) { const a = Math.round(total * 0.7); dids.forEach(d => { o[d] = d === f ? a : total - a; }); } else { const h = Math.floor(total / 2); o[dids[0]] = total - h; o[dids[1]] = h; } return o; };
+/* default levels of an engine set. A main driver whose car has no levels yet (new engine, replaced driver) starts from these, so a team only continues from there */
+const defOf = (set, k) => [0, 1, 2, 3].map(i => { const x = ((set || {})[k === 'e' ? 'd' : 'td'] || [])[i] || {}; return Math.max(0, Math.min(maxOf(set, k, i), +x.l || 0)); });
+const seedCars = (tm, set) => { let ch = false; if (!set) return ch; tm.up.d = tm.up.d || {}; tm.d.slice(0, 2).filter(Boolean).forEach(d => { if (!tm.up.d[d]) { tm.up.d[d] = { e: defOf(set, 'e'), t: defOf(set, 't') }; ch = true; } }); return ch; };
+/* supporting sponsor slots: free ones, and a maximum (free + bought) */
+const supCfg = u => { const f = u.freeSup != null ? +u.freeSup : (u.maxSup != null ? +u.maxSup : 2), c = u.capSup != null ? +u.capSup : Math.max(f, 4); return { free: f, cap: Math.max(c, f) }; };
 const entry = (k, cp, extra) => Object.assign({ id: uid(), at: Date.now(), k, cp }, extra || {});
 const THROTTLE = 8, WINDOW = 600;
 module.exports = async (req, res) => {
@@ -28,7 +33,9 @@ module.exports = async (req, res) => {
     if (!L.eq(String(b.pw || ''), String(tm.up.pw))) { await L.cmd(['INCR', fk]); await L.cmd(['EXPIRE', fk, WINDOW]); return fail('Wrong team password.', 401); }
     await L.cmd(['DEL', fk]);
     tm.up.d = tm.up.d || {}; tm.up.r = tm.up.r || []; tm.up.led = tm.up.led || [];
+    if (seedCars(tm, (e.up.en || []).find(x => x.id == tm.up.et))) await L.putState(s);
     const sm = L.sum(tm);
+    const noTb = !!e.up.noTurbo;
     if (b.kind === 'info') {
       return res.status(200).json({ cfg: e.up, tu: { et: tm.up.et || '', d: tm.up.d, sp: tm.up.sp || [], lk: !!tm.up.lk, m: tm.up.m || '', f: tm.up.f || '' }, sum: sm, reps: tm.up.r.slice(-20).reverse().map(r => ({ id: r.id, at: r.at, cost: r.cost, m: r.m, f: r.f, bud: r.bud, sh: r.sh, dc: r.dc, items: r.items, note: r.note, st: r.st, why: r.why })), led: tm.up.led.slice(-30).reverse().map(x => ({ at: x.at, k: x.k, cp: x.cp, q: x.q, note: x.note })) });
     }
@@ -46,6 +53,31 @@ module.exports = async (req, res) => {
       tm.up.led.push(ent); await L.putState(s);
       return res.status(200).json({ ok: true, sum: L.sum(tm) });
     }
+    if (b.kind === 'sign') {
+      const all = e.up.sp || [], sp = all.find(x => x.id == b.sid);
+      if (!sp) return fail('Sponsor not found.');
+      tm.up.sp = tm.up.sp || [];
+      if (tm.up.sp.includes(sp.id)) return fail('Your team already has this sponsor.');
+      const mine = tm.up.sp.map(id => all.find(x => x.id == id)).filter(Boolean), ents = [];
+      if (sp.k === 'm') { if (mine.some(x => x.k === 'm')) return fail('Your team already has a main sponsor. Only 1 main sponsor per team.'); }
+      else {
+        const { free, cap } = supCfg(e.up), n = mine.filter(x => x.k !== 'm').length;
+        if (n >= cap) return fail('Your team already has the maximum of ' + cap + ' supporting sponsors.');
+        if (n >= free + sm.slots) {
+          const sc = +e.up.slotCp || 1000;
+          if (sm.cp < sc) return fail('All free supporting slots are used. A new one costs ' + sc + ' CP (sponsor slot) and the team has ' + sm.cp + ' CP.');
+          ents.push(entry('slot', -sc, { q: 1, note: 'Slot for ' + sp.n }));
+        }
+      }
+      if (+sp.first > 0 && !tm.up.led.some(x => x.ref === 'sign:' + sp.id)) ents.push(entry('sp-sign', +sp.first, { ref: 'sign:' + sp.id, note: sp.n }));
+      ents.forEach(x => tm.up.led.push(x));
+      /* races that are already finished do not count for this contract */
+      tm.up.sk = tm.up.sk || {}; tm.up.sk[sp.id] = s.rc.filter(r => r.ev == e.id && (r.fe || []).length).map(r => r.id);
+      tm.up.spAt = tm.up.spAt || {}; tm.up.spAt[sp.id] = Date.now();
+      tm.up.sp.push(sp.id);
+      await L.putState(s);
+      return res.status(200).json({ ok: true, sum: L.sum(tm), slot: ents.some(x => x.k === 'slot') });
+    }
     if (b.kind === 'submit') {
       const dids = tm.d.slice(0, 2).filter(Boolean);
       const set = (e.up.en || []).find(x => x.id == tm.up.et);
@@ -56,7 +88,8 @@ module.exports = async (req, res) => {
       const name = d => (s.dr.find(x => x.did == d) || {}).name || d;
       for (const d of dids) {
         const ud = tm.up.d[d], it = (b.items && b.items[d]) || {}, o = { e: [0, 0, 0, 0], t: [0, 0, 0, 0] };
-        for (const k of ['e', 't']) for (let i = 0; i < 4; i++) {
+        if (noTb && (it.t || []).some(Boolean)) return fail('Turbo upgrades are not open for this event.');
+        for (const k of (noTb ? ['e'] : ['e', 't'])) for (let i = 0; i < 4; i++) {
           if (!+((it[k] || [])[i])) continue;
           const lv = +((ud[k] || [])[i]) || 0;
           if (lv >= maxOf(set, k, i)) return fail('A selected component of ' + name(d) + ' is already at its maximum level.');
