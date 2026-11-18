@@ -8,7 +8,7 @@ function upGrp(e,t,set,dids,k,lb){const tu=t.up,nm=UP_NM(k);
  return`<div class=ucg>${lb}</div><div class=sc><table class=utb><tr><th>Component</th>${dids.map(d=>`<th>${esc(upDn(d))}</th>`).join('')}</tr>`+nm.map((c,i)=>`<tr><td><b>${c}</b></td>`+dids.map(d=>{const m=upMax(set,k,i),l=Math.min(m,+((tu.d[d][k]||[])[i])||0);return`<td><div class=ubx>${upBoxes(l,m,false)}</div><small>${l<m?'Lv.'+l+' &middot; next '+cpF(upCost(e,k,i,l+1))+' CP':'Lv.'+l+' MAX'}</small></td>`}).join('')+'</tr>').join('')+'</table></div>'}
 function upPicks(e,t,set,dids){const tu=t.up;return dids.map(d=>`<div class=ucg>${esc(upDn(d))}</div>`+(upTb(e)?['e','t']:['e']).map(k=>UP_NM(k).map((c,i)=>{const m=upMax(set,k,i),l=Math.min(m,+((tu.d[d][k]||[])[i])||0),full=l>=m;
  return`<label class="upk${full?' dis':''}"><input type=checkbox id="uk_${t.id}_${d}_${k}${i}" data-c="${full?0:upCost(e,k,i,l+1)}" onchange="upTot('${t.id}')"${full?' disabled':''}><span>${k=='e'?'Engine':'Turbo'}: ${c}</span><em>${full?'MAX':'Lv.'+l+'&gt;Lv.'+(l+1)+' &middot; '+cpF(upCost(e,k,i,l+1))+' CP'}</em></label>`}).join('')).join('')).join('')}
-function upBody(e,t,set,dids){const tu=t.up,w=upW(t),u=e.up,buy=!!w.pk;
+function upBody(e,t,set,dids){const tu=t.up,w=upW(t),u=e.up,buy=!!w.pk&&!upPkOk(u,tu);
  const roles=['Main driver 1','Main driver 2','Reserve driver 1','Reserve driver 2'];
  return`${upPrices(e)}<div id=uwl_${t.id}>${upWal(t,e)}</div>
 <div class=ues><h4>${esc(set.n)}</h4>${upGrp(e,t,set,dids,'e','Engine')}${upTb(e)?upGrp(e,t,set,dids,'t','Turbo'+(set.tn?' &middot; '+esc(set.tn):'')):''}</div>
@@ -24,7 +24,7 @@ ${buy?'<p class=m style="margin-top:10px">Your team bought an HP package, so car
 <div class=ubuy><span>Tyre &middot; ${cpF(u.tireCp||2000)} CP each</span><input id=utq_${t.id} type=number min=1 max=20 value=1><button class="bt s" onclick="upBuy('${t.id}','tire')">Buy</button></div>
 <div class=ubuy><span>Sponsor slot &middot; ${cpF(u.slotCp||1000)} CP</span><button class="bt s" onclick="upBuy('${t.id}','slot')">Buy</button></div>
 ${(u.pk||[]).map(p=>`<div class=ubuy><span>${p.hp} HP package &middot; ${cpF(p.cp)} CP</span><button class="bt s" onclick="upBuy('${t.id}','pack','${p.id}')"${w.pk?' disabled':''}>${w.pk==p.id?'Bought':'Buy'}</button></div>`).join('')}
-<p class=m>An HP package can be bought once. After that the team cannot buy another package or upgrade the car.</p>
+<p class=m>An HP package can be bought once. ${upPkOk(u,tu)?'The team can still upgrade the car after buying it.':'After that the team cannot buy another package or upgrade the car.'}</p>
 <button class="bt s" onclick="upList('${t.id}')">Check my reports and history</button><div id=ur_${t.id}></div></details>`}
 function upLocked(t){const s=[t.name,...t.d.map(upDn)].join(' ').toLowerCase();
  return`<details class=ugt data-s="${esc(s)}" style="border-left:4px solid ${t.col}"><summary class=ugs><b>${tnm(t.name,txT(t),t.col2)}</b><span class=ugn>Locked</span><span class=ugv>Unlock</span></summary><div class=ulk><p class=m>Enter the team password from the admin to see this team's engine, CP wallet, sponsors and actions.</p><label class=k>Team password</label><input id=upl_${t.id} type=password autocomplete=off onkeydown="if(event.key=='Enter')upOpen('${t.id}')"><button class=bt onclick="upOpen('${t.id}')">Unlock</button><div id=ulm_${t.id}></div></div></details>`}
@@ -41,7 +41,7 @@ async function upRefresh(tid,msg){await upOpen(tid,true);setTimeout(()=>{const b
 function upPrices(e){const u=e.up,sets=upSets(e),tbl=(ttl,k)=>`<div class=ucg>${ttl}</div><div class=sc><table class=utb><tr><th>Component</th>${[1,2,3,4,5].map(l=>'<th>Lv.'+l+'</th>').join('')}</tr>`+upTbl(e,k).map((r,i)=>`<tr><td><b>${UP_NM(k)[i]}</b></td>${r.map(v=>`<td>${cpF(v)}</td>`).join('')}</tr>`).join('')+'</table></div>';
  return`<details class=ugf style="margin-bottom:14px"><summary>Price list, packages and sponsors</summary>${sets.map(s=>tbl(esc(s.n)+' &mdash; Engine','e')+(upTb(e)?tbl(esc(s.n)+' &mdash; Turbo'+(s.tn?' ('+esc(s.tn)+')':''),'t'):'')).join('')||'<p class=m>No engine yet.</p>'}
 <div class=ucg>Other prices</div><div class=urp>Tyre: ${cpF(u.tireCp||2000)} CP each<br>Sponsor slot: ${cpF(u.slotCp||1000)} CP<br>${(u.pk||[]).map(p=>p.hp+' HP package: '+cpF(p.cp)+' CP').join('<br>')}</div>
-<div class=ucg>Sponsors</div>${(u.sp||[]).map(x=>`<div class=urp><b>${esc(x.n)}</b> <span class=m>${x.k=='m'?'Main':'Supporting'}</span><br><span class=m>${esc(spLine(x))}</span><br><span class=m>First sign: ${x.first?cpF(x.first)+' CP':'-'} &middot; ${x.pn=='race'?'Per race: ':'Per season: '}${cpF(x.per)} CP${x.pen?' &middot; Fail: -'+cpF(x.pen)+' CP and contract ends':''}</span></div>`).join('')}
+${spGrp(u.sp,x=>`<div class=urp><b>${esc(x.n)}</b> <span class=m>${x.k=='m'?'Main':'Supporting'}</span><br><span class=m>${esc(spLine(x))}</span><br><span class=m>First sign: ${x.first?cpF(x.first)+' CP':'-'} &middot; ${x.pn=='race'?'Per race: ':'Per season: '}${cpF(x.per)} CP${x.pen?' &middot; Fail: -'+cpF(x.pen)+' CP and contract ends':''}</span></div>`,'No sponsor yet.')}
 <p class=m>Each team has 1 main sponsor and up to ${upSupCfg(u).cap} supporting sponsors: ${upSupCfg(u).free} free slot(s), the rest need a paid sponsor slot (${cpF(u.slotCp||1000)} CP each). A signed contract cannot be cancelled; the sponsor leaves automatically when the team misses its objective. CP from sponsors goes to the team wallet, not to a driver.</p></details>`}
 const upSearch=v=>{v=String(v||'').trim().toLowerCase();document.querySelectorAll('.ugt[data-s]').forEach(x=>x.style.display=!v||x.dataset.s.includes(v)?'':'none')};
 function pUpg(e){if(!upOn(e))return'<p class=m>The upgrade system is not open for this event.</p>';const ts=evT(e);if(!ts.length)return'<p class=m>No teams yet.</p>';
@@ -64,7 +64,7 @@ async function upSend(tid){const t=S.tm.find(x=>x.id==tid);if(!t)return;const it
  const j=await upCall(tid,{kind:'submit',items,m,f,budget,note:($('#un_'+tid)||{}).value||''});if(j.err)return upMsg(tid,j.err,1);
  upRefresh(tid,'Report sent ('+cpF(j.cost)+' CP). The admin will review it.')}
 async function upBuy(tid,what,id){upMsg(tid,'Sending...');const j=await upCall(tid,{kind:'buy',what,id,qty:what=='tire'?parseInt(($('#utq_'+tid)||{}).value):1});if(j.err)return upMsg(tid,j.err,1);
- upRefresh(tid,what=='pack'?'Package bought. Car upgrades are now closed for your team.':what=='tire'?'Tyres bought.':'Sponsor slot bought.')}
+ upRefresh(tid,what=='pack'?'Package bought.'+(()=>{const cx=upCtx(tid);return cx&&upPkOk(cx.e2.up,cx.t2.up)?' Your team can keep upgrading the car.':' Car upgrades are now closed for your team.'})():what=='tire'?'Tyres bought.':'Sponsor slot bought.')}
 const upK={tire:'Tyres',slot:'Sponsor slot',pack:'HP package',upg:'Upgrade',adj:'Admin adjustment','sp-sign':'Sponsor signing','sp-race':'Sponsor race reward','sp-sn':'Sponsor season reward','sp-pen':'Sponsor penalty'};
 async function upList(tid){const t=S.tm.find(x=>x.id==tid);if(!t)return;upMsg(tid,'Loading...');const j=await upCall(tid,{kind:'info'});if(j.err)return upMsg(tid,j.err,1);const cx=upCtx(tid);if(cx){cx.D.tu.sum=j.sum;const wb=$('#uwl_'+tid);if(wb)wb.innerHTML=upWal(cx.t2,cx.e2)}
  const reps=(j.reps||[]).map(x=>`<div class=urp><b class="st-${x.st}">${{p:'Pending',a:'Accepted',r:'Rejected'}[x.st]||x.st}</b> &middot; ${new Date(x.at).toLocaleDateString()} &middot; ${cpF(x.cost)} CP<br>${upItems(t,x.items)}${x.m?`<br><span class=m>Split ${x.m=='70'?'70:30, focus '+esc(upDn(x.f)):'50:50'} &middot; budget ${cpF(x.bud)} CP</span>`:''}${x.why?`<br><span class=m>Reason: ${esc(x.why)}</span>`:''}${x.note?`<br><span class=m>Note: ${esc(x.note)}</span>`:''}</div>`).join('');
@@ -76,12 +76,11 @@ function upSpDet(e,t){const tu=t.up,w=upW(t),u=e.up,all=u.sp||[],have=tu.sp||[],
 pay=x=>cpF(x.per)+' CP '+(x.pn=='race'?'per race':'per season'),
 terms=x=>`<span class=m>${esc(spLine(x))||'No objective'} &middot; ${pay(x)}${+x.first?' &middot; Sign bonus '+cpF(x.first)+' CP':''}${+x.pen?' &middot; Objective missed: -'+cpF(x.pen)+' CP':''}</span>`,
 avail=all.filter(x=>!have.includes(x.id)&&(x.k=='m'?!hasM:sup<cap)),
-card=x=>{const paid=x.k!='m'&&needPaid;return`<div class=urp><b>${esc(x.n)}</b> <span class=m>${x.k=='m'?'Main':'Supporting'}</span><br>${terms(x)}<div style="margin-top:8px"><button class="bt s" onclick="upSign('${t.id}','${x.id}',${paid?1:0})">${paid?'Sign &middot; uses a paid slot ('+cpF(sc)+' CP)':'Sign'}</button></div></div>`};
+card=x=>{const paid=x.k!='m'&&needPaid;return`<div class=urp><b>${esc(x.n)}</b><br>${terms(x)}<div style="margin-top:8px"><button class="bt s" onclick="upSign('${t.id}','${x.id}',${paid?1:0})">${paid?'Sign &middot; uses a paid slot ('+cpF(sc)+' CP)':'Sign'}</button></div></div>`};
 return`<details class=ugf><summary>Sponsors (${sps.length})</summary>
 <p class=m>1 main sponsor and supporting sponsors: ${sup} of ${Math.max(room,sup)} slots used (${free} free${w.slots?', '+w.slots+' bought':''}, maximum ${cap}). A signed contract cannot be cancelled. A sponsor leaves your team automatically when the team misses its objective.</p>
-${sps.map(x=>`<div class=urp><b>${esc(x.n)}</b> <span class=m>${x.k=='m'?'Main':'Supporting'}</span><br>${terms(x)}</div>`).join('')||'<p class=m>No sponsor yet.</p>'}
-<div class=ucg>Choose a sponsor</div>
-${avail.map(card).join('')||'<p class=m>'+(all.length?'No other sponsor is available for your team.':'The admin has not added any sponsor yet.')+'</p>'}
+<div class=ucs>Your sponsors</div>${spGrp(sps,x=>`<div class=urp><b>${esc(x.n)}</b><br>${terms(x)}</div>`,'None yet.')}
+<div class=ucs>Choose a sponsor</div>${spGrp(avail,card,all.length?'No sponsor available for your team.':'The admin has not added any sponsor yet.')}
 <div id=usm_${t.id}></div></details>`}
 const upSpMsg=(tid,m,bad)=>{const b=$('#usm_'+tid);if(b){const d=b.closest('details');if(d)d.open=true;b.innerHTML=`<p class=m style="margin-top:10px;color:${bad?'#e5252a':'#18b26b'}">${esc(m)}</p>`}};
 async function upSign(tid,sid,paid){const cx=upCtx(tid);if(!cx)return;const sp=((cx.e2.up||{}).sp||[]).find(x=>x.id==sid);if(!sp)return;

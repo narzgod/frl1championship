@@ -13,6 +13,8 @@ const defOf = (set, k) => [0, 1, 2, 3].map(i => { const x = ((set || {})[k === '
 const seedCars = (tm, set) => { let ch = false; if (!set) return ch; tm.up.d = tm.up.d || {}; tm.d.slice(0, 2).filter(Boolean).forEach(d => { if (!tm.up.d[d]) { tm.up.d[d] = { e: defOf(set, 'e'), t: defOf(set, 't') }; ch = true; } }); return ch; };
 /* supporting sponsor slots: free ones, and a maximum (free + bought) */
 const supCfg = u => { const f = u.freeSup != null ? +u.freeSup : (u.maxSup != null ? +u.maxSup : 2), c = u.capSup != null ? +u.capSup : Math.max(f, 4); return { free: f, cap: Math.max(c, f) }; };
+/* may a team that bought an HP package keep upgrading? per-team choice ('y' allow, 'n' locked) beats the event setting */
+const pkOk = (u, tu) => tu.pkUp === 'y' ? true : tu.pkUp === 'n' ? false : !!u.pkUpg;
 const entry = (k, cp, extra) => Object.assign({ id: uid(), at: Date.now(), k, cp }, extra || {});
 const THROTTLE = 8, WINDOW = 600;
 module.exports = async (req, res) => {
@@ -37,7 +39,7 @@ module.exports = async (req, res) => {
     const sm = L.sum(tm);
     const noTb = !!e.up.noTurbo;
     if (b.kind === 'info') {
-      return res.status(200).json({ cfg: e.up, tu: { et: tm.up.et || '', d: tm.up.d, sp: tm.up.sp || [], lk: !!tm.up.lk, m: tm.up.m || '', f: tm.up.f || '' }, sum: sm, reps: tm.up.r.slice(-20).reverse().map(r => ({ id: r.id, at: r.at, cost: r.cost, m: r.m, f: r.f, bud: r.bud, sh: r.sh, dc: r.dc, items: r.items, note: r.note, st: r.st, why: r.why })), led: tm.up.led.slice(-30).reverse().map(x => ({ at: x.at, k: x.k, cp: x.cp, q: x.q, note: x.note })) });
+      return res.status(200).json({ cfg: e.up, tu: { et: tm.up.et || '', d: tm.up.d, sp: tm.up.sp || [], lk: !!tm.up.lk, pkUp: tm.up.pkUp || '', m: tm.up.m || '', f: tm.up.f || '' }, sum: sm, reps: tm.up.r.slice(-20).reverse().map(r => ({ id: r.id, at: r.at, cost: r.cost, m: r.m, f: r.f, bud: r.bud, sh: r.sh, dc: r.dc, items: r.items, note: r.note, st: r.st, why: r.why })), led: tm.up.led.slice(-30).reverse().map(x => ({ at: x.at, k: x.k, cp: x.cp, q: x.q, note: x.note })) });
     }
     if (b.kind === 'buy') {
       let cp = 0, ent = null;
@@ -82,7 +84,7 @@ module.exports = async (req, res) => {
       const dids = tm.d.slice(0, 2).filter(Boolean);
       const set = (e.up.en || []).find(x => x.id == tm.up.et);
       if (!set || !dids.length || !dids.every(d => tm.up.d[d])) return fail('Upgrades are not set up for your team yet. Ask the admin.');
-      if (sm.pk) return fail('Your team bought an HP package, so car upgrades are closed.');
+      if (sm.pk && !pkOk(e.up, tm.up)) return fail('Your team bought an HP package, so car upgrades are closed.');
       if (tm.up.r.some(r => r.st === 'p')) return fail('You already have a report waiting for the admin. Please wait for the decision.');
       const items = {}, dc = {}; let n = 0, cost = 0;
       const name = d => (s.dr.find(x => x.did == d) || {}).name || d;
