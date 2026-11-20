@@ -12,6 +12,8 @@ const shares = (dids, m, f, total) => { const o = {}; if (dids.length < 2) { did
 const defOf = (set, k) => [0, 1, 2, 3].map(i => { const x = ((set || {})[k === 'e' ? 'd' : 'td'] || [])[i] || {}; return Math.max(0, Math.min(maxOf(set, k, i), +x.l || 0)); });
 const seedCars = (tm, set) => { let ch = false; if (!set) return ch; tm.up.d = tm.up.d || {}; tm.d.slice(0, 2).filter(Boolean).forEach(d => { if (!tm.up.d[d]) { tm.up.d[d] = { e: defOf(set, 'e'), t: defOf(set, 't') }; ch = true; } }); return ch; };
 /* supporting sponsor slots: free ones, and a maximum (free + bought) */
+/* a car is never below its engine's default levels (covers teams whose levels were copied before the admin set the defaults) */
+const floorCars = (tm, set) => { let ch = false; if (!set) return ch; Object.keys(tm.up.d || {}).forEach(d => { const c = tm.up.d[d]; ['e', 't'].forEach(k => { const df = defOf(set, k); if (!Array.isArray(c[k])) c[k] = [0, 0, 0, 0]; for (let i = 0; i < 4; i++) { const v = Math.max(+c[k][i] || 0, df[i]); if (v !== c[k][i]) { c[k][i] = v; ch = true; } } }); }); return ch; };
 const supCfg = u => { const f = u.freeSup != null ? +u.freeSup : (u.maxSup != null ? +u.maxSup : 2), c = u.capSup != null ? +u.capSup : Math.max(f, 4); return { free: f, cap: Math.max(c, f) }; };
 /* may a team that bought an HP package keep upgrading? per-team choice ('y' allow, 'n' locked) beats the event setting */
 const pkOk = (u, tu) => tu.pkUp === 'y' ? true : tu.pkUp === 'n' ? false : !!u.pkUpg;
@@ -35,7 +37,8 @@ module.exports = async (req, res) => {
     if (!L.eq(String(b.pw || ''), String(tm.up.pw))) { await L.cmd(['INCR', fk]); await L.cmd(['EXPIRE', fk, WINDOW]); return fail('Wrong team password.', 401); }
     await L.cmd(['DEL', fk]);
     tm.up.d = tm.up.d || {}; tm.up.r = tm.up.r || []; tm.up.led = tm.up.led || [];
-    if (seedCars(tm, (e.up.en || []).find(x => x.id == tm.up.et))) await L.putState(s);
+    const set0 = (e.up.en || []).find(x => x.id == tm.up.et), seeded = seedCars(tm, set0), floored = floorCars(tm, set0);
+    if (seeded || floored) await L.putState(s);
     const sm = L.sum(tm);
     const noTb = !!e.up.noTurbo;
     if (b.kind === 'info') {
@@ -92,10 +95,12 @@ module.exports = async (req, res) => {
         const ud = tm.up.d[d], it = (b.items && b.items[d]) || {}, o = { e: [0, 0, 0, 0], t: [0, 0, 0, 0] };
         if (noTb && (it.t || []).some(Boolean)) return fail('Turbo upgrades are not open for this event.');
         for (const k of (noTb ? ['e'] : ['e', 't'])) for (let i = 0; i < 4; i++) {
-          if (!+((it[k] || [])[i])) continue;
+          const q = Math.floor(+((it[k] || [])[i])) || 0;
+          if (q <= 0) continue;
           const lv = +((ud[k] || [])[i]) || 0;
-          if (lv >= maxOf(set, k, i)) return fail('A selected component of ' + name(d) + ' is already at its maximum level.');
-          const c1 = costOf(e, k, i, lv + 1); o[k][i] = 1; n++; cost += c1; dc[d] = (dc[d] || 0) + c1;
+          if (lv + q > maxOf(set, k, i)) return fail('A selected component of ' + name(d) + ' cannot go beyond its maximum level.');
+          let c1 = 0; for (let j = 1; j <= q; j++) c1 += costOf(e, k, i, lv + j);
+          o[k][i] = q; n++; cost += c1; dc[d] = (dc[d] || 0) + c1;
         }
         items[d] = o;
       }

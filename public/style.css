@@ -251,3 +251,5 @@ button.x.pri{background:var(--a);color:var(--ac);border-color:var(--a)}
 .pbk{margin:10px 0 4px;border:1px solid var(--ln);border-radius:10px;padding:8px 12px;background:var(--s2)}.pbk summary{cursor:pointer;font-family:var(--f-ui);font-weight:700;font-size:calc(13px*var(--fsb,1))}.dpr{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--ln)}.dpr:last-of-type{border-bottom:0}
 
 .ucs{font-weight:800;font-size:calc(13px*var(--fsb,1));letter-spacing:.06em;text-transform:uppercase;margin:16px 0 2px;padding-top:12px;border-top:1px solid var(--ln)}
+
+.upk select{width:auto;flex:none;margin-left:auto;max-width:60%}.upk small{margin-left:6px}

@@ -1,13 +1,14 @@
 /* Upgrade tab (public). Needs core.js. The whole tab is locked: a team opens it with the password the admin set. Nothing about a team's upgrades is in the public data. */
 const UPD={};let UPOPEN='';
 const upDn=d=>(S.dr.find(x=>x.did==d)||{}).name||d;
-const upItems=(t,items)=>t.d.slice(0,2).filter(Boolean).map(d=>{const it=(items||{})[d]||{},o=[];['e','t'].forEach(k=>UP_NM(k).forEach((c,i)=>{if((it[k]||[])[i])o.push(c)}));return esc(upDn(d))+': '+(o.length?o.join(', '):'-')}).join('<br>');
+const upItems=(t,items)=>t.d.slice(0,2).filter(Boolean).map(d=>{const it=(items||{})[d]||{},o=[];['e','t'].forEach(k=>UP_NM(k).forEach((c,i)=>{if((it[k]||[])[i])o.push(c+(it[k][i]>1?' +'+it[k][i]:''))}));return esc(upDn(d))+': '+(o.length?o.join(', '):'-')}).join('<br>');
 const upWal=(t,e)=>{const w=upW(t),pk=w.pk?(((e||TEV||{}).up||{}).pk||[]).find(x=>x.id==w.pk):null;
  return`<div class=uwal><div><b>${cpF(w.cp)}</b><span>Team CP</span></div><div><b>${w.tires}</b><span>Tyres bought</span></div><div><b>${w.slots}</b><span>Extra sponsor slots</span></div><div><b>${w.pk?(pk?pk.hp+' HP':'Yes'):'-'}</b><span>HP package</span></div></div>`};
 function upGrp(e,t,set,dids,k,lb){const tu=t.up,nm=UP_NM(k);
  return`<div class=ucg>${lb}</div><div class=sc><table class=utb><tr><th>Component</th>${dids.map(d=>`<th>${esc(upDn(d))}</th>`).join('')}</tr>`+nm.map((c,i)=>`<tr><td><b>${c}</b></td>`+dids.map(d=>{const m=upMax(set,k,i),l=Math.min(m,+((tu.d[d][k]||[])[i])||0);return`<td><div class=ubx>${upBoxes(l,m,false)}</div><small>${l<m?'Lv.'+l+' &middot; next '+cpF(upCost(e,k,i,l+1))+' CP':'Lv.'+l+' MAX'}</small></td>`}).join('')+'</tr>').join('')+'</table></div>'}
 function upPicks(e,t,set,dids){const tu=t.up;return dids.map(d=>`<div class=ucg>${esc(upDn(d))}</div>`+(upTb(e)?['e','t']:['e']).map(k=>UP_NM(k).map((c,i)=>{const m=upMax(set,k,i),l=Math.min(m,+((tu.d[d][k]||[])[i])||0),full=l>=m;
- return`<label class="upk${full?' dis':''}"><input type=checkbox id="uk_${t.id}_${d}_${k}${i}" data-c="${full?0:upCost(e,k,i,l+1)}" onchange="upTot('${t.id}')"${full?' disabled':''}><span>${k=='e'?'Engine':'Turbo'}: ${c}</span><em>${full?'MAX':'Lv.'+l+'&gt;Lv.'+(l+1)+' &middot; '+cpF(upCost(e,k,i,l+1))+' CP'}</em></label>`}).join('')).join('')).join('')}
+ const op=[...Array(m-l+1).keys()].map(q=>`<option value=${q} data-c=${[...Array(q).keys()].reduce((a,j)=>a+upCost(e,k,i,l+j+1),0)}>${q?'+'+q+' (Lv.'+(l+q)+') &middot; '+cpF([...Array(q).keys()].reduce((a,j)=>a+upCost(e,k,i,l+j+1),0))+' CP':'No upgrade'}</option>`).join('');
+ return`<label class="upk${full?' dis':''}"><span>${k=='e'?'Engine':'Turbo'}: ${c} <small class=m>Lv.${l}</small></span>${full?'<em>MAX</em>':`<select id="uk_${t.id}_${d}_${k}${i}" onchange="upTot('${t.id}')" disabled>${op}</select>`}</label>`}).join('')).join('')).join('')}
 function upBody(e,t,set,dids){const tu=t.up,w=upW(t),u=e.up,buy=!!w.pk&&!upPkOk(u,tu);
  const roles=['Main driver 1','Main driver 2','Reserve driver 1','Reserve driver 2'];
  return`${upPrices(e)}<div id=uwl_${t.id}>${upWal(t,e)}</div>
@@ -16,9 +17,9 @@ function upBody(e,t,set,dids){const tu=t.up,w=upW(t),u=e.up,buy=!!w.pk&&!upPkOk(
 <p class=m style="margin:8px 0 0">Upgrades only belong to the 2 main drivers. A reserve driver who replaces a main driver races in that main driver's car.</p></div></details>
 ${upSpDet(e,t)}
 <details class=ugf><summary>Team actions</summary>
-${buy?'<p class=m style="margin-top:10px">Your team bought an HP package, so car upgrades are closed.</p>':`<p class=m style="margin-top:12px">Pick the components to upgrade. One level per component in each report. The cost is counted for you.</p>${upPicks(e,t,set,dids)}<div class=utot>Total: <b id=upt_${t.id}>0</b> CP</div>
+${buy?'<p class=m style="margin-top:10px">Your team bought an HP package, so car upgrades are closed.</p>':`<label class=k>CP budget for this report</label><input id=ubd_${t.id} type=number min=1 inputmode=numeric oninput="upTot('${t.id}')"><p class=m style="margin:6px 0 12px">Step 1: enter the CP budget. The upgrade options stay locked until you do. The budget is shared by the split below; each driver's upgrades must fit inside their part.</p><p class=m>Choose how many levels to add to each component, any number up to its maximum. The cost is counted for you.</p>${upPicks(e,t,set,dids)}<div class=utot>Total: <b id=upt_${t.id}>0</b> CP</div>
 <label class=k>Split between the two drivers${tu.lk?' (locked by the admin)':''}</label><select id=ums_${t.id} onchange="upTot('${t.id}')"${tu.lk?' disabled':''}>${[['50','50:50 (equal)']].concat(dids.map(d=>['70:'+d,'70:30, focus '+upDn(d)])).map(([v,l])=>`<option value="${v}"${(tu.lk&&((tu.m=='70'&&v=='70:'+tu.f)||(tu.m!='70'&&v=='50')))?' selected':''}>${esc(l)}</option>`).join('')}</select>
-<label class=k>CP budget for this report</label><input id=ubd_${t.id} type=number min=1 inputmode=numeric oninput="this.dataset.u=1;upTot('${t.id}')"><p class=m style="margin:6px 0 0">The budget is shared by the split. Each driver's upgrades must fit inside their part.</p><div id=usp_${t.id}></div>
+<div id=usp_${t.id}></div>
 <label class=k>Note (optional)</label><input id=un_${t.id} maxlength=300><button class=bt onclick="upSend('${t.id}')">Send report</button>`}
 <div class=ucg>Buy with team CP</div>
 <div class=ubuy><span>Tyre &middot; ${cpF(u.tireCp||2000)} CP each</span><input id=utq_${t.id} type=number min=1 max=20 value=1><button class="bt s" onclick="upBuy('${t.id}','tire')">Buy</button></div>
@@ -49,16 +50,16 @@ function pUpg(e){if(!upOn(e))return'<p class=m>The upgrade system is not open fo
  return'<p class=m>Upgrades are locked. Unlock your team with the password from the admin to see its engine, CP wallet, price list and sponsors.</p><input id=ups class=ups placeholder="Search team or driver..." oninput="upSearch(this.value)" autocomplete=off>'+ts.map(t=>upTeam(e,t)).join('')}
 const upMsg=(tid,m,bad)=>{const b=$('#ur_'+tid);if(b)b.innerHTML=`<p class=m style="margin-top:10px;color:${bad?'#e5252a':'#18b26b'}">${esc(m)}</p>`};
 function upTot(tid){const t=S.tm.find(x=>x.id==tid);if(!t)return;const dids=t.d.slice(0,2).filter(Boolean),dc={};let n=0;
- dids.forEach(d=>{dc[d]=0;document.querySelectorAll('[id^="uk_'+tid+'_'+d+'_"]').forEach(c=>{if(c.checked)dc[d]+=+c.dataset.c||0});n+=dc[d]});
+ const bi=$('#ubd_'+tid),ok=(parseInt(bi&&bi.value)||0)>=1;document.querySelectorAll('[id^="uk_'+tid+'_"]').forEach(c=>{c.disabled=!ok});
+ dids.forEach(d=>{dc[d]=0;document.querySelectorAll('[id^="uk_'+tid+'_'+d+'_"]').forEach(c=>{dc[d]+=+(c.selectedOptions[0]||{dataset:{}}).dataset.c||0});n+=dc[d]});
  const tb=$('#upt_'+tid);if(tb)tb.textContent=cpF(n);const sel=($('#ums_'+tid)||{}).value||'50',m=sel.indexOf('70')==0?'70':'50',f=m=='70'?sel.split(':')[1]:'';
  const fr={};dids.forEach(d=>fr[d]=dids.length<2?1:(m=='70'?(d==f?.7:.3):.5));let req=n;dids.forEach(d=>{if(dc[d]>0)req=Math.max(req,Math.ceil(dc[d]/fr[d]))});
- const bi=$('#ubd_'+tid);if(bi&&!bi.dataset.u)bi.value=req||'';
  const bud=parseInt(bi&&bi.value)||0,sh=upShares(dids,m,f,bud),box=$('#usp_'+tid);
  if(box)box.innerHTML=dids.map(d=>`<div class=urp style="display:flex;justify-content:space-between;gap:8px"><span>${esc(upDn(d))}</span><b style="color:${dc[d]>sh[d]?'#e5252a':'#18b26b'}">${cpF(dc[d])} / ${cpF(sh[d])} CP</b></div>`).join('')+(n?`<p class=m style="margin:6px 0 0">Smallest budget that fits this split: ${cpF(req)} CP.</p>`:'')}
 async function upCall(tid,body){const t=S.tm.find(x=>x.id==tid),pw=(UPD[tid]||{}).pw||'';if(!t)return{err:'Team not found.'};if(!pw)return{err:'Unlock this team with its password first.'};
  try{const r=await fetch('/api/upgrade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({ev:t.ev,team:tid,pw},body))}),j=await r.json().catch(()=>({}));return r.ok?j:{err:j.err||'Could not send. Try again.'}}catch(x){return{err:'No connection. Try again.'}}}
 async function upSend(tid){const t=S.tm.find(x=>x.id==tid);if(!t)return;const items={};let pick=false;
- t.d.slice(0,2).filter(Boolean).forEach(d=>{const o={e:[0,0,0,0],t:[0,0,0,0]};['e','t'].forEach(k=>[0,1,2,3].forEach(i=>{const c=$('#uk_'+tid+'_'+d+'_'+k+i);if(c&&c.checked){o[k][i]=1;pick=true}}));items[d]=o});
+ t.d.slice(0,2).filter(Boolean).forEach(d=>{const o={e:[0,0,0,0],t:[0,0,0,0]};['e','t'].forEach(k=>[0,1,2,3].forEach(i=>{const c=$('#uk_'+tid+'_'+d+'_'+k+i),q=c?+c.value:0;if(q>0){o[k][i]=q;pick=true}}));items[d]=o});
  const sel=($('#ums_'+tid)||{}).value||'50',m=sel.indexOf('70')==0?'70':'50',f=m=='70'?sel.split(':')[1]:'',budget=parseInt(($('#ubd_'+tid)||{}).value);
  if(!pick)return upMsg(tid,'Select at least one component to upgrade.',1);if(!(budget>=1))return upMsg(tid,'Enter the CP budget for this report.',1);upMsg(tid,'Sending...');
  const j=await upCall(tid,{kind:'submit',items,m,f,budget,note:($('#un_'+tid)||{}).value||''});if(j.err)return upMsg(tid,j.err,1);
